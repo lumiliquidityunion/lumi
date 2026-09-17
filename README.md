@@ -1,28 +1,40 @@
 # LUMI — Liquidity Union Moderated Interface
 
-Curated access to Cetus and Bluefin liquidity farms on Sui. One coin. Fixed supply. Stake as normal through LUMI.
+Curated access to Cetus and Bluefin liquidity farms on Sui. One coin. Fixed supply. **Live on Sui mainnet.**
 
 **Landing:** [lumiliquidityunion.github.io/lumi](https://lumiliquidityunion.github.io/lumi)
 
-## Coin
+## Coin — live
 
 | | |
 | --- | --- |
 | Name | Liquidity Union |
 | Symbol | LUMI |
-| Network | Sui |
+| Network | Sui mainnet |
 | Decimals | 2 |
 | Total supply | 100,000,000.00 LUMI |
-| Launch circulation | 12,400,000.00 LUMI |
-| Protocol vault | 87,600,000.00 LUMI |
-| Further minting | None. `TreasuryCap` is sent to `0x0` at genesis. |
+| Operations wallet | 12,400,000.00 LUMI |
+| Shared vault | 87,600,000.00 LUMI |
+| Further minting | None. `TreasuryCap` is owned by `0x0`. |
 | Icon | [lumi-logo.jpg](https://lumiliquidityunion.github.io/lumi/lumi-logo.jpg) |
 
-On-chain units are two-decimal. `100,000,000.00` LUMI = `10_000_000_000` base units. Launch allocation `12,400,000.00` goes to the operations wallet. The remainder is locked in the shared `Vault`. Admin can pause and later withdraw vault LUMI for settlement — it cannot mint more.
+### Addresses
+
+| | |
+| --- | --- |
+| Package | [`0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7`](https://suiscan.xyz/mainnet/object/0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7) |
+| Coin type | [`0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7::lumi::LUMI`](https://suiscan.xyz/mainnet/coin/0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7::lumi::LUMI) |
+| Vault | [`0x5bb897f85645195805f2e48dd21bddbd866048fa030423e6bfcf652a198282c0`](https://suiscan.xyz/mainnet/object/0x5bb897f85645195805f2e48dd21bddbd866048fa030423e6bfcf652a198282c0) |
+| Ops wallet | [`0x58189b677894e0fe7ad38e0e516408a3500da57d86fc0436373bc1d9c6334d0a`](https://suiscan.xyz/mainnet/object/0x58189b677894e0fe7ad38e0e516408a3500da57d86fc0436373bc1d9c6334d0a) |
+| Publish tx | [`94EyMTBDV4mEywzVUow3qLTt35hESwAWi7ZKnvJpLZki`](https://suiscan.xyz/mainnet/tx/94EyMTBDV4mEywzVUow3qLTt35hESwAWi7ZKnvJpLZki) |
+
+Verified on-chain: 100,000,000.00 total, 12,400,000.00 in ops, 87,600,000.00 in the vault, TreasuryCap at `0x0`, logo URL in coin metadata. Publish cost 0.026092 SUI.
+
+SuiScan source / MetaHub listing badge is still pending. The coin is live without that off-chain badge.
 
 Machine-readable spec: [`docs/coin.json`](docs/coin.json)
 
-Contract: [`lumi-contract/sources/lumi.move`](lumi-contract/sources/lumi.move)
+Contract source: [`lumi-contract/sources/lumi.move`](lumi-contract/sources/lumi.move)
 
 ## Settlement
 
@@ -34,7 +46,7 @@ Of every profit tick:
 - **2%** posts into the LUMI/SUI pair
 - **0.5%** funds operations
 
-Redeem profits as LUMI (from the vault / settlement flow) or take the pool’s coins as they are. LUMI/SUI is protocol-owned liquidity, not an opening stakeable farm.
+Redeem profits as LUMI from the protocol vault, or take the pool’s coins as they are. Supply does not inflate. LUMI/SUI is protocol-owned liquidity, not an opening stakeable farm.
 
 ## Opening registry
 
