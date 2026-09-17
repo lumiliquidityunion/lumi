@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "network": "sui-mainnet",
+  "status": "live",
+  "package": "0xc3f4cd97d86c36c807bae8e7b766b74de3e9feee504e3360a803082484c6d906",
+  "modules": ["cetus_adapter", "lumi", "revenue", "router"],
+  "publishTx": "DnAXMpQX7CRjddiWTR1nqTh2x6Dnd9hC9cJkGbG9SgRK",
+  "setupTx": "Fzy92kTLyjx4Zbzr3Sio95XN83czVKU2quHq7w88cJSg",
+  "router": {
+    "objectId": "0x83d70c4960964f37b2890703a9f293999f6e01d75da002f75d941b38e52ab1cc",
+    "type": "0xc3f4cd97d86c36c807bae8e7b766b74de3e9feee504e3360a803082484c6d906::router::Router",
+    "operationsWallet": "0x58189b677894e0fe7ad38e0e516408a3500da57d86fc0436373bc1d9c6334d0a",
+    "paused": false,
+    "nextFarmId": 0,
+    "farms": []
+  },
+  "revenueVaults": {
+    "USDC": {
+      "objectId": "0xc6f8ff6178217465e96c7cc751d5e7aa7c1031f358cd39e7efb19aedd31a89ec",
+      "type": "0xc3f4cd97d86c36c807bae8e7b766b74de3e9feee504e3360a803082484c6d906::revenue::RevenueVault<0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC>"
+    },
+    "SUI": {
+      "objectId": "0xd287e57727542b0654a93b3dab7b6b78df5d71a1456220be803d842022f31a00",
+      "type": "0xc3f4cd97d86c36c807bae8e7b766b74de3e9feee504e3360a803082484c6d906::revenue::RevenueVault<0x2::sui::SUI>"
+    },
+    "CETUS": {
+      "objectId": "0x786f54ab80ecd0bc3af89a2630acf55c2b269166130eb4e0c7b6a48db4651d03",
+      "type": "0xc3f4cd97d86c36c807bae8e7b766b74de3e9feee504e3360a803082484c6d906::revenue::RevenueVault<0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS>"
+    }
+  },
+  "notes": [
+    "v2 source was not in the GitHub tree at record time; objects were verified live on Sui mainnet.",
+    "Router farm list is empty. Opening Cetus/Bluefin registry still needs to be admitted on-chain.",
+    "Revenue vault balances start at 0. Native 2.5% take and LUMI 0.5% route post here once farms settle.",
+    "v1 coin package remains 0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7."
+  ]
+}
