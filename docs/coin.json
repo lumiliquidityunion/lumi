@@ -1,0 +1,36 @@
+{
+  "name": "Liquidity Union",
+  "symbol": "LUMI",
+  "description": "Curated liquidity-farm access on Sui",
+  "network": "sui",
+  "decimals": 2,
+  "totalSupply": 100000000,
+  "totalSupplyBase": 10000000000,
+  "launchCirculation": 12400000,
+  "launchCirculationBase": 1240000000,
+  "vaultReserve": 87600000,
+  "vaultReserveBase": 8760000000,
+  "mintable": false,
+  "treasuryCap": "0x0",
+  "icon": "https://lumiliquidityunion.github.io/lumi/lumi-logo.jpg",
+  "homepage": "https://lumiliquidityunion.github.io/lumi",
+  "github": "https://github.com/lumiliquidityunion/lumi",
+  "package": {
+    "name": "lumi",
+    "address": "0x0",
+    "module": "lumi::lumi",
+    "witness": "LUMI",
+    "status": "unpublished"
+  },
+  "fees": {
+    "staker": 0.975,
+    "lumiSuiPool": 0.02,
+    "operations": 0.005
+  },
+  "notes": [
+    "TreasuryCap is transferred to 0x0 at genesis. No further LUMI can be minted.",
+    "Launch allocation goes to the operations wallet. Remainder is locked in the shared Vault.",
+    "LUMI/SUI is protocol-owned liquidity, not an opening stakeable farm.",
+    "Stake through LUMI on listed Cetus and Bluefin CLMMs. Positions stay on the venue."
+  ]
+}

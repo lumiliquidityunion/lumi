@@ -1,0 +1,86 @@
+{
+  "network": "sui-mainnet",
+  "opening": [
+    {
+      "venue": "Cetus",
+      "base": "USDC",
+      "quote": "SUI",
+      "kind": "CLMM",
+      "feeBps": 25,
+      "band": "core",
+      "objectId": "0xb8d7d9e66a60c239e7a60110efcf8de6c705580ed924d0dde141f4a0e2c90105"
+    },
+    {
+      "venue": "Cetus",
+      "base": "DEEP",
+      "quote": "SUI",
+      "kind": "CLMM",
+      "feeBps": 25,
+      "band": "growth",
+      "objectId": "0xe01243f37f712ef87e556afb9b1d03d0fae13f96d324ec912daffc339dfdcbd2"
+    },
+    {
+      "venue": "Cetus",
+      "base": "USDSUI",
+      "quote": "SUI",
+      "kind": "CLMM",
+      "feeBps": 20,
+      "band": "core",
+      "objectId": "0x440e5e3b13b8220c5c338bb5a4291cab5c58064eaf3654c77f3e9aed5147689c"
+    },
+    {
+      "venue": "Cetus",
+      "base": "USDSUI",
+      "quote": "USDC",
+      "kind": "CLMM",
+      "feeBps": 1,
+      "band": "core",
+      "objectId": "0xa7417fb5f59e23b0a7826d78f025653823c49265be07bbf6dd9e553ba4249a56"
+    },
+    {
+      "venue": "Cetus",
+      "base": "WAL",
+      "quote": "SUI",
+      "kind": "CLMM",
+      "feeBps": 25,
+      "band": "growth",
+      "objectId": "0x72f5c6eef73d77de271886219a2543e7c29a33de19a6c69c5cf1899f729c3f17"
+    },
+    {
+      "venue": "Bluefin",
+      "base": "SUI",
+      "quote": "USDC",
+      "kind": "CLMM",
+      "feeBps": 17.5,
+      "band": "core",
+      "objectId": "0x15dbcac854b1fc68fc9467dbd9ab34270447aabd8cc0e04a5864d95ccb86b74a"
+    },
+    {
+      "venue": "Bluefin",
+      "base": "DEEP",
+      "quote": "SUI",
+      "kind": "CLMM",
+      "feeBps": 17.5,
+      "band": "growth",
+      "objectId": "0x7242459a663c4e59434252ceb27c228f6b1f21f2ba506f3b62d71b19a7421cc1"
+    },
+    {
+      "venue": "Bluefin",
+      "base": "WAL",
+      "quote": "SUI",
+      "kind": "CLMM",
+      "feeBps": 17.5,
+      "band": "growth",
+      "objectId": "0xe60bc7ade245b9f35b49686dfab0a18e5ca9176d49bef1b90f60d67d06315ff0"
+    }
+  ],
+  "delisted": [
+    {
+      "venue": "Cetus",
+      "base": "USDC",
+      "quote": "SCA",
+      "objectId": "0x06bd46d0204b7faba458dc2342e08fc5008993d5bef84e0f1d87fa3e1728b319",
+      "reason": "TVL below charter band"
+    }
+  ]
+}
