@@ -3,30 +3,32 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="LUMI is a curated access layer for external liquidity farms on Sui." />
+    <meta name="description" content="LUMI is a curated access layer for external liquidity farms on Sui. Real farms. One interface. 100M fixed supply." />
     <title>LUMI — Liquidity Union</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230d0e12'/%3E%3Ccircle cx='32' cy='32' r='8' fill='%23e7e6eb'/%3E%3Cpath d='M14 31a18 18 0 0 1 18-18M32 51a18 18 0 0 0 18-18' fill='none' stroke='%2363c5dc' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <link rel="icon" href="lumi-logo.jpg" />
     <style>
-      :root { --ink: #0d0e12; --surface: #14161d; --line: #2b313d; --text: #edf4f7; --muted: #a7b4bc; --aqua: #17c8ef; --bright: #7cf02f; --violet: #7d25ff; --sun: #ffb900; }
+      :root { --ink: #0b0a12; --surface: #14121c; --line: #2a2438; --text: #f4f2f8; --muted: #9b96ab; --aqua: #7aa6ff; --bright: #3dce8a; --violet: #8b7dff; --sun: #ff8a3d; }
       * { box-sizing: border-box; }
-      body { margin: 0; color: var(--text); background: radial-gradient(circle at 90% 0%, #1a4b3e 0, transparent 22rem), radial-gradient(circle at 5% 70%, #241038 0, transparent 26rem), var(--ink); font: 16px/1.55 Inter, ui-sans-serif, system-ui, sans-serif; }
+      body { margin: 0; color: var(--text); background: radial-gradient(circle at 90% 0%, #1a1430 0, transparent 22rem), radial-gradient(circle at 5% 70%, #241038 0, transparent 26rem), var(--ink); font: 16px/1.55 Figtree, Inter, ui-sans-serif, system-ui, sans-serif; }
       .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
       nav { display: flex; justify-content: space-between; align-items: center; padding: 24px 0; border-bottom: 1px solid var(--line); }
-      .brand { letter-spacing: .16em; font-weight: 800; background: linear-gradient(90deg, var(--aqua), var(--bright), var(--sun), #ff4b21); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .brand { letter-spacing: .16em; font-weight: 800; background: linear-gradient(90deg, #4d7dff, #a855f7, #ff8a3d); -webkit-background-clip: text; background-clip: text; color: transparent; }
       .network { color: var(--muted); font-size: .88rem; } .network i { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--bright); box-shadow: 0 0 16px var(--bright); }
       header { padding: 72px 0 56px; display: grid; grid-template-columns: 1.35fr .65fr; gap: 48px; align-items: center; }
       .logo { width: 100%; border-radius: 18px; border: 1px solid var(--line); display: block; box-shadow: 0 18px 50px #0008; }
-      h1 { margin: 0 0 16px; max-width: 10ch; font-size: clamp(2.8rem, 7vw, 5.3rem); line-height: .98; letter-spacing: -.06em; }
-      h1 em { color: var(--aqua); font-style: normal; }
+      h1 { margin: 0 0 16px; max-width: 11ch; font-size: clamp(2.8rem, 7vw, 5.3rem); line-height: .98; letter-spacing: -.06em; }
+      h1 em { background: linear-gradient(90deg, #4d7dff, #a855f7, #ff8a3d); -webkit-background-clip: text; background-clip: text; color: transparent; font-style: normal; }
       .lead { max-width: 40rem; color: var(--muted); font-size: 1.12rem; }
       .pill { display: inline-block; margin-bottom: 17px; color: var(--aqua); font-size: .78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
       .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--line); }
       .stat { padding: 22px; background: var(--surface); } .stat b { display:block; color: var(--aqua); font-size: 1.35rem; } .stat span { color: var(--muted); font-size: .8rem; }
       section { padding: 50px 0; border-top: 1px solid var(--line); } h2 { margin: 0 0 22px; font-size: clamp(1.7rem, 3vw, 2.5rem); letter-spacing: -.04em; }
-      .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; } .card { min-height: 170px; padding: 21px; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(145deg, #171a22, #11131a); }
-      .num { color: var(--bright); font-size: .75rem; font-weight: 800; letter-spacing: .14em; } h3 { margin: 13px 0 7px; font-size: 1rem; } .card p { margin: 0; color: var(--muted); font-size: .9rem; }
+      .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; } .card { min-height: 170px; padding: 21px; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(145deg, #1a1726, #12101a); }
+      .num { color: var(--sun); font-size: .75rem; font-weight: 800; letter-spacing: .14em; } h3 { margin: 13px 0 7px; font-size: 1rem; } .card p { margin: 0; color: var(--muted); font-size: .9rem; }
       table { width: 100%; border-collapse: collapse; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); } th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--line); } th { color: var(--aqua); font-size: .76rem; letter-spacing: .1em; text-transform: uppercase; } td { color: #dbe5e9; } tr:last-child td { border: 0; } .tag { color: var(--aqua); font-size: .8rem; }
-      .notice { padding: 20px 22px; border-left: 3px solid var(--bright); border-radius: 0 12px 12px 0; color: var(--muted); background: #111d23; }
+      .notice { padding: 20px 22px; border-left: 3px solid var(--bright); border-radius: 0 12px 12px 0; color: var(--muted); background: #111823; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem; word-break: break-all; }
+      a { color: var(--aqua); }
       footer { padding: 32px 0 46px; color: var(--muted); font-size: .85rem; }
       @media (max-width: 760px) { header { grid-template-columns: 1fr; padding-top: 44px; } .steps { grid-template-columns: 1fr 1fr; } .stats { grid-template-columns: 1fr; } th:nth-child(3), td:nth-child(3) { display:none; } }
       @media (max-width: 440px) { .wrap { width: min(100% - 28px, 1120px); } .steps { grid-template-columns: 1fr; } }
@@ -34,16 +36,61 @@
   </head>
   <body>
     <main class="wrap">
-      <nav><div class="brand">LUMI</div><div class="network"><i></i>Sui mainnet</div></nav>
+      <nav><div class="brand">LUMI</div><div class="network"><i></i>Sui mainnet · live</div></nav>
       <header>
-        <div><div class="pill">Liquidity Union</div><h1>Real farms. <em>One</em> interface.</h1><p class="lead">LUMI is a curated access layer for external liquidity farms on Sui. Stake through LUMI; your position is deployed at the selected venue.</p></div>
+        <div>
+          <div class="pill">Liquidity Union</div>
+          <h1>Real farms. <em>One</em> interface.</h1>
+          <p class="lead">LUMI is a curated access layer for external liquidity farms on Sui. Stake through LUMI; your position is deployed at the selected venue. 100M fixed supply. No reward-token inflation.</p>
+        </div>
         <img class="logo" src="lumi-logo.jpg" alt="LUMI — Liquidity Union" />
       </header>
-      <div class="stats"><div class="stat"><b>100M</b><span>Fixed total supply</span></div><div class="stat"><b>12.4M</b><span>Starting circulation</span></div><div class="stat"><b>2.5%</b><span>Profit settlement take</span></div></div>
-      <section><h2>How LUMI works</h2><div class="steps"><article class="card"><div class="num">01</div><h3>Choose a farm</h3><p>Select a reviewed liquidity pool from the LUMI registry.</p></article><article class="card"><div class="num">02</div><h3>Stake through LUMI</h3><p>Supply the pair from your wallet and receive a position NFT.</p></article><article class="card"><div class="num">03</div><h3>Earn at the venue</h3><p>Your position operates in its Cetus or Bluefin pool.</p></article><article class="card"><div class="num">04</div><h3>Settle in native coins</h3><p>You keep 97.5% of realized profit. LUMI routes 2% to protocol liquidity and 0.5% to operations.</p></article></div></section>
-      <section><h2>Opening registry</h2><table><thead><tr><th>Venue</th><th>Pair</th><th>Fee band</th><th>Charter band</th></tr></thead><tbody><tr><td>Cetus</td><td>USDC / SUI</td><td>0.25%</td><td class="tag">Core</td></tr><tr><td>Cetus</td><td>DEEP / SUI</td><td>0.25%</td><td class="tag">Growth</td></tr><tr><td>Cetus</td><td>USDSUI / SUI</td><td>0.20%</td><td class="tag">Core</td></tr><tr><td>Cetus</td><td>USDSUI / USDC</td><td>0.01%</td><td class="tag">Core</td></tr><tr><td>Cetus</td><td>WAL / SUI</td><td>0.25%</td><td class="tag">Growth</td></tr><tr><td>Bluefin</td><td>SUI / USDC</td><td>0.175%</td><td class="tag">Core</td></tr><tr><td>Bluefin</td><td>DEEP / SUI</td><td>0.175%</td><td class="tag">Growth</td></tr><tr><td>Bluefin</td><td>WAL / SUI</td><td>0.175%</td><td class="tag">Growth</td></tr></tbody></table></section>
-      <section><div class="notice">LUMI/SUI is protocol-owned liquidity, not an opening stakeable farm. LUMI has fixed supply and no reward-token inflation. Farm additions, throttles, and delistings are managed through the on-chain registry.</div></section>
-      <footer>Liquidity Union Moderated Interface · Built for Sui</footer>
+      <div class="stats">
+        <div class="stat"><b>100M</b><span>Fixed total supply</span></div>
+        <div class="stat"><b>12.4M</b><span>Starting circulation</span></div>
+        <div class="stat"><b>2.5%</b><span>Profit settlement take</span></div>
+      </div>
+      <section>
+        <h2>How LUMI works</h2>
+        <div class="steps">
+          <article class="card"><div class="num">01</div><h3>Choose a farm</h3><p>Select a reviewed liquidity pool from the LUMI registry.</p></article>
+          <article class="card"><div class="num">02</div><h3>Stake through LUMI</h3><p>Supply the pair from your wallet. Your position is deployed at the selected venue.</p></article>
+          <article class="card"><div class="num">03</div><h3>Earn at the venue</h3><p>Your position operates in its Cetus or Bluefin pool.</p></article>
+          <article class="card"><div class="num">04</div><h3>Settle in native coins</h3><p>You keep 97.5% of realized profit. LUMI routes 2% to protocol liquidity and 0.5% to operations.</p></article>
+        </div>
+      </section>
+      <section>
+        <h2>Opening registry</h2>
+        <table>
+          <thead><tr><th>Venue</th><th>Pair</th><th>Fee band</th><th>Charter band</th></tr></thead>
+          <tbody>
+            <tr><td>Cetus</td><td>USDC / SUI</td><td>0.25%</td><td class="tag">Core</td></tr>
+            <tr><td>Cetus</td><td>DEEP / SUI</td><td>0.25%</td><td class="tag">Growth</td></tr>
+            <tr><td>Cetus</td><td>USDSUI / SUI</td><td>0.20%</td><td class="tag">Core</td></tr>
+            <tr><td>Cetus</td><td>USDSUI / USDC</td><td>0.01%</td><td class="tag">Core</td></tr>
+            <tr><td>Cetus</td><td>WAL / SUI</td><td>0.25%</td><td class="tag">Growth</td></tr>
+            <tr><td>Bluefin</td><td>SUI / USDC</td><td>0.175%</td><td class="tag">Core</td></tr>
+            <tr><td>Bluefin</td><td>DEEP / SUI</td><td>0.175%</td><td class="tag">Growth</td></tr>
+            <tr><td>Bluefin</td><td>WAL / SUI</td><td>0.175%</td><td class="tag">Growth</td></tr>
+          </tbody>
+        </table>
+      </section>
+      <section>
+        <h2>On-chain</h2>
+        <p class="lead">Live on Sui mainnet. TreasuryCap is owned by 0x0. 87.6M LUMI sits in the shared vault. SuiScan listing badge still pending.</p>
+        <table>
+          <tbody>
+            <tr><td>Package</td><td class="mono"><a href="https://suiscan.xyz/mainnet/object/0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7">0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7</a></td></tr>
+            <tr><td>Coin type</td><td class="mono"><a href="https://suiscan.xyz/mainnet/coin/0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7::lumi::LUMI">0xabb4…feb7::lumi::LUMI</a></td></tr>
+            <tr><td>Vault</td><td class="mono"><a href="https://suiscan.xyz/mainnet/object/0x5bb897f85645195805f2e48dd21bddbd866048fa030423e6bfcf652a198282c0">0x5bb897f85645195805f2e48dd21bddbd866048fa030423e6bfcf652a198282c0</a></td></tr>
+            <tr><td>Publish tx</td><td class="mono"><a href="https://suiscan.xyz/mainnet/tx/94EyMTBDV4mEywzVUow3qLTt35hESwAWi7ZKnvJpLZki">94EyMTBDV4mEywzVUow3qLTt35hESwAWi7ZKnvJpLZki</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+      <section>
+        <div class="notice">LUMI/SUI is protocol-owned liquidity, not an opening stakeable farm. LUMI has fixed supply and no reward-token inflation. Farm additions, throttles, and delistings are managed through the registry. Redeem as LUMI from the vault, or take the pool’s coins as they are.</div>
+      </section>
+      <footer>Liquidity Union Moderated Interface · Built for Sui · <a href="https://github.com/lumiliquidityunion/lumi">Source</a></footer>
     </main>
   </body>
 </html>
