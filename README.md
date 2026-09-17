@@ -38,15 +38,22 @@ Contract source: [`lumi-contract/sources/lumi.move`](lumi-contract/sources/lumi.
 
 ## Settlement
 
-Stake a listed farm through LUMI with a Sui wallet. Positions stay on Cetus or Bluefin.
+Principal is never discounted. Farm rewards are a settlement choice.
 
-Of every profit tick:
+### Native rewards
 
-- **97.5%** stays with the staker
-- **2%** posts into the LUMI/SUI pair
-- **0.5%** funds operations
+User keeps CETUS, SUI, and any other farm rewards in their original coins. LUMI takes **2.5%** of rewards:
 
-Redeem profits as LUMI from the protocol vault, or take the pool’s coins as they are. Supply does not inflate. LUMI/SUI is protocol-owned liquidity, not an opening stakeable farm.
+- **2%** to protocol liquidity revenue
+- **0.5%** to operations
+
+### LUMI rewards / discounted route
+
+User assigns the farm rewards to LUMI. LUMI pays the user the reward’s SUI-value in LUMI, less only the **0.5%** operations fee. LUMI retains the claimed reward coins and later uses them to deepen the matching LUMI liquidity pools.
+
+Not a discount on principal. Native coins at a 2.5% take, or LUMI-denominated rewards at a 0.5% take.
+
+LUMI/SUI is protocol-owned liquidity, not an opening stakeable farm.
 
 ## Opening registry
 

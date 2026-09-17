@@ -30,15 +30,23 @@
     "publishTx": "https://suiscan.xyz/mainnet/tx/94EyMTBDV4mEywzVUow3qLTt35hESwAWi7ZKnvJpLZki"
   },
   "fees": {
-    "staker": 0.975,
-    "lumiSuiPool": 0.02,
-    "operations": 0.005
+    "principal": 0,
+    "native": {
+      "staker": 0.975,
+      "protocolLiquidity": 0.02,
+      "operations": 0.005
+    },
+    "lumiRoute": {
+      "stakerPaidInLumi": 0.995,
+      "operations": 0.005,
+      "rewardCoinsRetained": 1
+    }
   },
   "notes": [
+    "Principal is never discounted. Settlement applies to farm rewards only.",
+    "Native route: keep CETUS, SUI, and other farm coins. 2.5% take (2% protocol liquidity, 0.5% operations).",
+    "LUMI route: assign rewards to LUMI. User is paid the SUI-value in LUMI less 0.5% ops. LUMI retains the reward coins to deepen matching LUMI pools.",
     "TreasuryCap is owned by 0x0. No further LUMI can be minted.",
-    "12,400,000.00 LUMI is in the operations wallet. 87,600,000.00 LUMI is in the shared Vault.",
-    "Logo URL is live in coin metadata.",
-    "SuiScan source/MetaHub verification is pending; the coin is live without the listing badge.",
     "LUMI/SUI is protocol-owned liquidity, not an opening stakeable farm."
   ]
 }
