@@ -10,6 +10,13 @@ V6 is deployed and adds `lumi::price_oracle` for the existing LUMI/SUI pool:
 - Oracle creation transaction: `AAuK36q3Y6SB4RfiUEe8DoswVVTmqTWCccDjfvU3hHR9`
 - First observation transaction: `CtmGPQgBsJM6Af5x9stri9V2Y4JXnXKTphLR8VEsbt2v`
 
+V7 recovery upgrade: `0x89a9123a40e056bba87ffd91bd2d04eade5b217da69fc0e49e68c64ca34bb904`  
+V7 transaction: `3ZrNKXm8PjHUQxUdUEwo6RoDHHeheENgQLZZeEBTupEn`
+
+V7 ignores observation gaps that precede the requested window while still
+requiring continuous coverage at the beginning of, throughout, and at the end
+of the five-minute window.
+
 ## What it does
 
 - `create` creates one shared `PriceOracle` object.
