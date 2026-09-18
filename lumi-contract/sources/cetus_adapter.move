@@ -77,6 +77,21 @@ module lumi::cetus_adapter {
         used_native_fallback: bool,
     }
 
+    /// Full-position LUMI settlement is deliberately restricted to a
+    /// CoinTypeA/SUI Cetus receipt. CoinTypeA is valued into SUI using its
+    /// own pool-bound oracle, then the total SUI value is converted to LUMI
+    /// against the independent LUMI/SUI oracle. The venue assets remain in
+    /// their typed revenue vaults; this function never sells a user's assets
+    /// through an unbounded external swap.
+    public struct PositionSettledInLumi has copy, drop {
+        farm_id: u64,
+        retained_a: u64,
+        retained_sui: u64,
+        gross_lumi: u64,
+        user_lumi: u64,
+        operations_lumi: u64,
+    }
+
     /// Opens a managed Cetus position using all of `coin_a` as the fixed
     /// input and `coin_b` as the maximum opposing input. Any unused coin_b is
     /// returned to the transaction sender, providing max-input protection.
@@ -163,6 +178,77 @@ module lumi::cetus_adapter {
         if (balance::value(&ops_b) > 0) transfer::public_transfer(coin::from_balance(ops_b, ctx), ops) else balance::destroy_zero(ops_b);
         event::emit(PositionClosed {
             farm_id, principal_a: principal_a_value, principal_b: principal_b_value, fee_a, fee_b,
+        });
+    }
+
+    /// Atomically close a LUMI-route CoinTypeA/SUI receipt and settle every
+    /// recovered principal and trading fee in LUMI. The caller supplies
+    /// normal Cetus minimum return amounts plus `min_lumi_out`; an unavailable
+    /// or manipulated oracle aborts before the position is touched, so the
+    /// user can instead use `close_native`.
+    ///
+    /// Outstanding incentive rewards must be claimed first through their
+    /// dedicated reward route. This avoids treating an unpriced third reward
+    /// coin as if it were principal.
+    public entry fun close_position_for_lumi<CoinTypeA>(
+        router: &Router,
+        lumi_vault: &mut Vault,
+        lumi_oracle: &PriceOracle,
+        lumi_sui_pool: &Pool<LUMI, SUI>,
+        asset_sui_oracle: &price_oracle::CetusPairOracle<CoinTypeA, SUI>,
+        config: &GlobalConfig,
+        pool: &mut Pool<CoinTypeA, SUI>,
+        position: CetusPosition<CoinTypeA, SUI>,
+        min_amount_a: u64,
+        min_amount_sui: u64,
+        retained_a_vault: &mut RevenueVault<CoinTypeA>,
+        retained_sui_vault: &mut RevenueVault<SUI>,
+        min_lumi_out: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let CetusPosition { id, farm_id, settlement_route, mut cetus_position } = position;
+        router::assert_active_farm_pool(router, farm_id, object::id(pool));
+        assert!(settlement_route == router::route_lumi_claim(), E_MAX_INPUT);
+
+        // Both quotes are read and guarded before venue state is mutated.
+        assert!(price_oracle::is_twap_ready(lumi_oracle, 300, clock), E_MAX_INPUT);
+        let lumi_twap = price_oracle::twap_sqrt_price(lumi_oracle, 300, clock);
+        let lumi_spot = pool::current_sqrt_price(lumi_sui_pool);
+        assert!(price_oracle::is_spot_within_twap_deviation(lumi_spot, lumi_twap), E_MAX_INPUT);
+        let asset_twap = price_oracle::cetus_pair_twap_sqrt_price(asset_sui_oracle, 300, clock);
+        let asset_spot = pool::current_sqrt_price(pool);
+        assert!(price_oracle::is_spot_within_twap_deviation(asset_spot, asset_twap), E_MAX_INPUT);
+
+        let liquidity = position::liquidity(&cetus_position);
+        let (principal_a, principal_sui) = if (liquidity > 0) {
+            pool::remove_liquidity_with_slippage(
+                config, pool, &mut cetus_position, liquidity, min_amount_a, min_amount_sui, clock,
+            )
+        } else (balance::zero<CoinTypeA>(), balance::zero<SUI>());
+        let (fees_a, fees_sui) = pool::collect_fee(config, pool, &cetus_position, false);
+        pool::close_position(config, pool, cetus_position);
+        object::delete(id);
+
+        let retained_a = balance::value(&principal_a) + balance::value(&fees_a);
+        let retained_sui = balance::value(&principal_sui) + balance::value(&fees_sui);
+        let a_value_in_sui = price_oracle::quote_a_to_b(retained_a, asset_twap);
+        let gross_lumi = price_oracle::quote_b_to_a(retained_sui + a_value_in_sui, lumi_twap);
+        assert!(gross_lumi > 0, E_ZERO_INPUT);
+        let operations_lumi = router::lumi_claim_fee(gross_lumi);
+        let mut user_payout = lumi::withdraw_lumi_for_settlement(lumi_vault, gross_lumi, ctx);
+        let operations = coin::split(&mut user_payout, operations_lumi, ctx);
+        let user_lumi = coin::value(&user_payout);
+        assert!(user_lumi >= min_lumi_out, E_MAX_INPUT);
+
+        revenue::deposit(retained_a_vault, principal_a);
+        revenue::deposit(retained_a_vault, fees_a);
+        revenue::deposit(retained_sui_vault, principal_sui);
+        revenue::deposit(retained_sui_vault, fees_sui);
+        transfer::public_transfer(user_payout, tx_context::sender(ctx));
+        if (operations_lumi > 0) transfer::public_transfer(operations, router::operations_wallet(router)) else coin::destroy_zero(operations);
+        event::emit(PositionSettledInLumi {
+            farm_id, retained_a, retained_sui, gross_lumi, user_lumi, operations_lumi,
         });
     }
 

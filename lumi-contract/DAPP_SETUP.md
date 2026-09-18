@@ -6,6 +6,7 @@
 | --- | --- |
 | LUMI original package | `0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7` |
 | LUMI V5 package | `0x3a6e9dde0fcf456ef27c16d06d3b4ddadabc7cc8832fefbac3b7883d5601ebbd` |
+| LUMI V10 package | `0x38a5a746f9f6b04665ab4845631a0f832fe2ccda6fdd6b8d2b1742dc65814e13` |
 | LUMI coin type | `0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7::lumi::LUMI` |
 | Router | `0x83d70c4960964f37b2890703a9f293999f6e01d75da002f75d941b38e52ab1cc` |
 | USDC revenue vault | `0xc6f8ff6178217465e96c7cc751d5e7aa7c1031f358cd39e7efb19aedd31a89ec` |
@@ -16,6 +17,7 @@
 | LUMI reserve vault | `0x5bb897f85645195805f2e48dd21bddbd866048fa030423e6bfcf652a198282c0` |
 | Cetus USDC/SUI pool | `0xb8d7d9e66a60c239e7a60110efcf8de6c705580ed924d0dde141f4a0e2c90105` |
 | LUMI/SUI pool | `0x451b42a0c1a3ce4b32cffda328ec22e726d7f4cb1c6f77800bd1defb1a1a2ff2` |
+| USDC/SUI settlement oracle | `0x193796e2b2ef3029aeafef011ef383d1d17c676a4c9c95f8583a814eed7ae38b` |
 
 ## Registered Cetus farms
 
@@ -46,6 +48,24 @@ Sui clock. The user selects one immutable route at open:
 connected operations wallet's controlled test only. Do not expose it to public
 users until an on-chain TWAP/oracle and a price-deviation guard replace the
 manual quote.
+
+## V10 full LUMI position close
+
+`cetus_adapter::close_position_for_lumi` is available for a LUMI-route
+`CoinTypeA / SUI` receipt, beginning with farm 0 USDC/SUI. It closes the
+receipt atomically, retains the recovered USDC and SUI (including trading fees)
+in their typed revenue vaults, and pays the wallet LUMI less the 0.5%
+operations fee. The call requires:
+
+- the LUMI/SUI oracle and the pool-bound USDC/SUI oracle to each have a fresh,
+  continuous five-minute history;
+- both current pool prices to remain within 2% of those TWAPs;
+- normal Cetus `min_amount_a` / `min_amount_sui` protection; and
+- a caller-supplied `min_lumi_out`.
+
+Claim or settle every incentive reward first. The full-close function does not
+invent a value for a third reward coin; it aborts without touching the receipt
+when its protections are not met, leaving `close_native` available.
 
 ## Registered MMT farms
 
