@@ -5,6 +5,7 @@
 module lumi::revenue_swap {
     use cetus_clmm::config::GlobalConfig;
     use cetus_clmm::pool::{Self, Pool};
+    use cetus_clmm::tick_math;
     use lumi::lumi::AdminCap;
     use lumi::revenue::{Self, RevenueVault};
     use sui::balance;
@@ -40,8 +41,12 @@ module lumi::revenue_swap {
     ) {
         assert!(amount_in > 0, E_ZERO);
         let mut input = revenue::withdraw(input_vault, admin, amount_in, ctx);
+        // Cetus requires a valid boundary even when the caller wants its full
+        // A-to-B range.  Zero therefore means the protocol minimum, not an
+        // unchecked price limit; `min_sui_out` remains the economic guard.
+        let limit = if (sqrt_price_limit == 0) tick_math::min_sqrt_price() else sqrt_price_limit;
         let (returned_a, received_sui, receipt) = pool::flash_swap<CoinTypeA, SUI>(
-            config, pool, true, true, amount_in, sqrt_price_limit, clock,
+            config, pool, true, true, amount_in, limit, clock,
         );
         let paid = pool::swap_pay_amount(&receipt);
         // A price boundary must never turn this into a partial vault sale.
