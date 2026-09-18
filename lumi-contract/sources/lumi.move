@@ -112,6 +112,17 @@ module lumi::lumi {
         coin::from_balance(balance::split(&mut vault.lumi_reserve, amount), ctx)
     }
 
+    /// Return unused LUMI from a package-owned, price-guarded liquidity
+    /// operation to the fixed reserve.  This is package-only so an outside
+    /// module cannot turn the reserve into a general-purpose deposit account.
+    public(package) fun return_lumi_from_liquidity(
+        vault: &mut Vault,
+        incoming: Coin<LUMI>,
+    ) {
+        assert!(!vault.paused, E_PAUSED);
+        balance::join(&mut vault.lumi_reserve, coin::into_balance(incoming));
+    }
+
     public fun set_paused(vault: &mut Vault, _admin: &AdminCap, paused: bool) {
         vault.paused = paused;
         event::emit(VaultPaused { paused });
