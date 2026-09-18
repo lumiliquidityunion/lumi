@@ -151,6 +151,49 @@ module lumi::price_oracle {
 
     public fun sample_count(oracle: &PriceOracle): u64 { vector::length(&oracle.observations) }
 
+    public fun is_twap_ready(oracle: &PriceOracle, window_seconds: u64, clock: &Clock): bool {
+        if (window_seconds < MIN_TWAP_WINDOW_SECONDS) return false;
+        let now = clock::timestamp_ms(clock) / 1000;
+        let earliest = if (now > window_seconds) now - window_seconds else 0;
+        let count = vector::length(&oracle.observations);
+        if (count < 2) return false;
+        let mut previous = *vector::borrow(&oracle.observations, 0);
+        let mut i = 1;
+        while (i < count) {
+            let candidate = *vector::borrow(&oracle.observations, i);
+            if (candidate.timestamp > earliest) break;
+            previous = candidate;
+            i = i + 1;
+        };
+        if (previous.timestamp > earliest || earliest > previous.timestamp + MAX_SAMPLE_GAP_SECONDS) return false;
+        let last = vector::borrow(&oracle.observations, count - 1);
+        if (last.timestamp + MAX_SAMPLE_GAP_SECONDS < now) return false;
+        let mut covered: u64 = 0;
+        while (i < count) {
+            let current = *vector::borrow(&oracle.observations, i);
+            if (current.timestamp > previous.timestamp + MAX_SAMPLE_GAP_SECONDS) return false;
+            let interval_start = if (previous.timestamp > earliest) previous.timestamp else earliest;
+            let interval_end = if (current.timestamp < now) current.timestamp else now;
+            if (interval_end > interval_start) covered = covered + (interval_end - interval_start);
+            previous = current;
+            i = i + 1;
+        };
+        if (now > previous.timestamp) {
+            let duration = now - previous.timestamp;
+            if (duration > MAX_SAMPLE_GAP_SECONDS) return false;
+            covered = covered + duration;
+        };
+        covered == window_seconds
+    }
+
+    public fun is_spot_within_twap_deviation(spot: u128, twap: u128): bool {
+        if (twap == 0) return false;
+        let spot_price = (spot as u256) * (spot as u256);
+        let twap_price = (twap as u256) * (twap as u256);
+        spot_price * 10_000 >= twap_price * 9_800
+            && spot_price * 10_000 <= twap_price * 10_200
+    }
+
     public fun cetus_pair_twap_sqrt_price<CoinTypeA, CoinTypeB>(
         oracle: &CetusPairOracle<CoinTypeA, CoinTypeB>, window_seconds: u64, clock: &Clock,
     ): u128 {

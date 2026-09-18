@@ -100,6 +100,18 @@ module lumi::lumi {
         coin::from_balance(balance::split(&mut vault.lumi_reserve, amount), ctx)
     }
 
+    /// Only LUMI-package settlement modules may withdraw this reserve without
+    /// an AdminCap; external packages and wallet calls cannot reach it.
+    public(package) fun withdraw_lumi_for_settlement(
+        vault: &mut Vault,
+        amount: u64,
+        ctx: &mut TxContext,
+    ): Coin<LUMI> {
+        assert!(!vault.paused, E_PAUSED);
+        assert!(amount > 0 && amount <= balance::value(&vault.lumi_reserve), E_BAD_AMOUNT);
+        coin::from_balance(balance::split(&mut vault.lumi_reserve, amount), ctx)
+    }
+
     public fun set_paused(vault: &mut Vault, _admin: &AdminCap, paused: bool) {
         vault.paused = paused;
         event::emit(VaultPaused { paused });

@@ -9,6 +9,7 @@ module lumi::cetus_adapter {
     use cetus_clmm::position::{Self, Position};
     use cetus_clmm::rewarder::RewarderGlobalVault;
     use lumi::lumi::{Self, AdminCap, LUMI, Vault};
+    use lumi::price_oracle::{Self, PriceOracle};
     use lumi::revenue::{Self, RevenueVault};
     use lumi::router::{Self, Router};
     use sui::balance::{Self, Balance};
@@ -19,6 +20,7 @@ module lumi::cetus_adapter {
     use sui::object::{Self, UID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+    use sui::sui::SUI;
 
     const E_ZERO_INPUT: u64 = 1;
     const E_MAX_INPUT: u64 = 2;
@@ -64,6 +66,15 @@ module lumi::cetus_adapter {
         reward_amount: u64,
         operations_fee: u64,
         protocol_fee: u64,
+    }
+
+    public struct LumiRewardSettled has copy, drop {
+        farm_id: u64,
+        native_reward: u64,
+        gross_lumi: u64,
+        user_lumi: u64,
+        operations_lumi: u64,
+        used_native_fallback: bool,
     }
 
     /// Opens a managed Cetus position using all of `coin_a` as the fixed
@@ -269,6 +280,58 @@ module lumi::cetus_adapter {
         });
     }
 
+    /// Permissionless true-value SUI-reward settlement. The receipt gets the
+    /// LUMI value implied by the protected LUMI/SUI TWAP, never a guaranteed
+    /// dollar value. An unsafe or dust quote settles as native SUI instead.
+    public entry fun claim_lumi_sui_reward<CoinTypeA>(
+        router: &Router,
+        lumi_vault: &mut Vault,
+        oracle: &PriceOracle,
+        lumi_sui_pool: &Pool<LUMI, SUI>,
+        config: &GlobalConfig,
+        pool: &mut Pool<CoinTypeA, SUI>,
+        position: &mut CetusPosition<CoinTypeA, SUI>,
+        cetus_reward_vault: &mut RewarderGlobalVault,
+        retained_sui_vault: &mut RevenueVault<SUI>,
+        min_lumi_out: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        router::assert_active_farm_pool(router, position.farm_id, object::id(pool));
+        assert!(position.settlement_route == router::route_lumi_claim(), E_MAX_INPUT);
+        let mut reward = pool::collect_reward<CoinTypeA, SUI, SUI>(
+            config, pool, &position.cetus_position, cetus_reward_vault, true, clock,
+        );
+        let reward_amount = balance::value(&reward);
+        if (!price_oracle::is_twap_ready(oracle, 300, clock)) {
+            settle_native_sui_fallback(router, position.farm_id, reward, retained_sui_vault, ctx);
+            event::emit(LumiRewardSettled { farm_id: position.farm_id, native_reward: reward_amount, gross_lumi: 0, user_lumi: 0, operations_lumi: 0, used_native_fallback: true });
+            return
+        };
+        let twap = price_oracle::twap_sqrt_price(oracle, 300, clock);
+        let spot = pool::current_sqrt_price(lumi_sui_pool);
+        if (!price_oracle::is_spot_within_twap_deviation(spot, twap)) {
+            settle_native_sui_fallback(router, position.farm_id, reward, retained_sui_vault, ctx);
+            event::emit(LumiRewardSettled { farm_id: position.farm_id, native_reward: reward_amount, gross_lumi: 0, user_lumi: 0, operations_lumi: 0, used_native_fallback: true });
+            return
+        };
+        let gross_lumi = price_oracle::quote_b_to_a(reward_amount, twap);
+        if (gross_lumi == 0) {
+            settle_native_sui_fallback(router, position.farm_id, reward, retained_sui_vault, ctx);
+            event::emit(LumiRewardSettled { farm_id: position.farm_id, native_reward: reward_amount, gross_lumi: 0, user_lumi: 0, operations_lumi: 0, used_native_fallback: true });
+            return
+        };
+        revenue::deposit(retained_sui_vault, reward);
+        let operations_lumi = router::lumi_claim_fee(gross_lumi);
+        let mut payout = lumi::withdraw_lumi_for_settlement(lumi_vault, gross_lumi, ctx);
+        let operations = coin::split(&mut payout, operations_lumi, ctx);
+        let user_lumi = coin::value(&payout);
+        assert!(user_lumi >= min_lumi_out, E_MAX_INPUT);
+        transfer::public_transfer(payout, tx_context::sender(ctx));
+        if (operations_lumi > 0) transfer::public_transfer(operations, router::operations_wallet(router)) else coin::destroy_zero(operations);
+        event::emit(LumiRewardSettled { farm_id: position.farm_id, native_reward: reward_amount, gross_lumi, user_lumi, operations_lumi, used_native_fallback: false });
+    }
+
     /// Guarded test route for the LUMI reward option. The receipt must have
     /// been opened with `router::route_lumi_claim()`. It retains the entire
     /// native reward in the protocol vault and pays a manually quoted amount
@@ -431,5 +494,18 @@ module lumi::cetus_adapter {
         let operations = balance::split(fees, operations_fee);
         let protocol = balance::split(fees, protocol_fee);
         (operations, protocol)
+    }
+
+    fun settle_native_sui_fallback(
+        router: &Router, farm_id: u64, mut reward: Balance<SUI>, retained_sui_vault: &mut RevenueVault<SUI>, ctx: &mut TxContext,
+    ) {
+        let reward_amount = balance::value(&reward);
+        let (operations_fee, protocol_fee) = router::native_reward_fees(reward_amount);
+        let operations = balance::split(&mut reward, operations_fee);
+        let protocol = balance::split(&mut reward, protocol_fee);
+        revenue::deposit(retained_sui_vault, protocol);
+        transfer::public_transfer(coin::from_balance(reward, ctx), tx_context::sender(ctx));
+        if (operations_fee > 0) transfer::public_transfer(coin::from_balance(operations, ctx), router::operations_wallet(router)) else balance::destroy_zero(operations);
+        event::emit(NativeRewardClaimed { farm_id, reward_amount, operations_fee, protocol_fee });
     }
 }
