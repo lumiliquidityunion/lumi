@@ -7,11 +7,12 @@
 module lumi::liquidity_support {
     use cetus_clmm::config::GlobalConfig;
     use cetus_clmm::pool::{Self, Pool};
-    use cetus_clmm::position::Position;
+    use cetus_clmm::position::{Self, Position};
     use lumi::lumi::{Self, AdminCap, LUMI, Vault};
     use lumi::price_oracle::{Self, PriceOracle};
     use lumi::revenue::{Self, RevenueVault};
     use lumi::router::{Self, Router};
+    use sui::balance::{Self, Balance};
     use sui::clock::Clock;
     use sui::coin::{Self, Coin};
     use sui::event;
@@ -44,6 +45,11 @@ module lumi::liquidity_support {
         position_id: sui::object::ID,
         lumi_deployed: u64,
         sui_deployed: u64,
+        lumi_returned: u64,
+        sui_returned: u64,
+    }
+
+    public struct LiquiditySupportTestClosed has copy, drop {
         lumi_returned: u64,
         sui_returned: u64,
     }
@@ -114,6 +120,52 @@ module lumi::liquidity_support {
         });
     }
 
+    /// Admin-gated integration test. It opens a temporary protocol position,
+    /// adds the oracle-matched allocation, then removes and closes it in the
+    /// same transaction.  All realised LUMI returns to the reserve and all
+    /// realised SUI returns to the typed revenue vault, so no long-lived test
+    /// position or user exposure remains after a successful call.
+    public entry fun create_and_close_lumi_sui_support_for_test(
+        router: &Router,
+        admin: &AdminCap,
+        lumi_vault: &mut Vault,
+        sui_revenue_vault: &mut RevenueVault<SUI>,
+        oracle: &PriceOracle,
+        pool: &mut Pool<LUMI, SUI>,
+        config: &GlobalConfig,
+        sui_budget: u64,
+        tick_lower: u32,
+        tick_upper: u32,
+        min_lumi_deployed: u64,
+        min_sui_deployed: u64,
+        min_lumi_returned: u64,
+        min_sui_returned: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        assert!(!router::is_paused(router), E_PAUSED);
+        assert!(sui_budget > 0, E_ZERO);
+        let mut position = pool::open_position(config, pool, tick_lower, tick_upper, ctx);
+        let (_, _, _, _) = deploy(
+            admin, lumi_vault, sui_revenue_vault, oracle, pool, config, &mut position,
+            sui_budget, min_lumi_deployed, min_sui_deployed, clock, ctx,
+        );
+        let liquidity = position::liquidity(&position);
+        let (mut returned_lumi, mut returned_sui) = pool::remove_liquidity_with_slippage(
+            config, pool, &mut position, liquidity, min_lumi_returned, min_sui_returned, clock,
+        );
+        let (fees_lumi, fees_sui) = pool::collect_fee(config, pool, &position, false);
+        balance::join(&mut returned_lumi, fees_lumi);
+        balance::join(&mut returned_sui, fees_sui);
+        let lumi_returned = balance::value(&returned_lumi);
+        let sui_returned = balance::value(&returned_sui);
+        assert!(lumi_returned >= min_lumi_returned && sui_returned >= min_sui_returned, E_MINIMUM);
+        pool::close_position(config, pool, position);
+        lumi::return_lumi_from_liquidity(lumi_vault, coin::from_balance(returned_lumi, ctx));
+        revenue::deposit(sui_revenue_vault, returned_sui);
+        event::emit(LiquiditySupportTestClosed { lumi_returned, sui_returned });
+    }
+
     fun deploy(
         admin: &AdminCap,
         lumi_vault: &mut Vault,
@@ -160,5 +212,4 @@ module lumi::liquidity_support {
             + ((amount % BPS_DENOMINATOR) * LUMI_CAP_BPS) / BPS_DENOMINATOR
     }
 }
-
 
