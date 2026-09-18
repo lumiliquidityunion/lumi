@@ -1,9 +1,14 @@
 # LUMI V6 TWAP observation oracle
 
-V6 is source-ready but not deployed. It adds `lumi::price_oracle` for the
-existing LUMI/SUI pool:
+V6 is deployed and adds `lumi::price_oracle` for the existing LUMI/SUI pool:
 
 `0x451b42a0c1a3ce4b32cffda328ec22e726d7f4cb1c6f77800bd1defb1a1a2ff2`
+
+- V6 package: `0x11b7a66ba2dd491d63f5eb39872fe98c161555089247469bc8810075e80a2c99`
+- V6 upgrade transaction: `GqN6TwPFYzBKtXx1nYZKxLZU1he7gBBEuB3J9LxioBRJ`
+- Shared oracle: `0x054a753ddf24a05e15a8ba80b33bd8b0d3b5f604a5e9d57f210f1681a301784e`
+- Oracle creation transaction: `AAuK36q3Y6SB4RfiUEe8DoswVVTmqTWCccDjfvU3hHR9`
+- First observation transaction: `CtmGPQgBsJM6Af5x9stri9V2Y4JXnXKTphLR8VEsbt2v`
 
 ## What it does
 
