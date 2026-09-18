@@ -5,7 +5,7 @@
 | Item | Address |
 | --- | --- |
 | LUMI original package | `0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7` |
-| LUMI V2 package | `0xc3f4cd97d86c36c807bae8e7b766b74de3e9feee504e3360a803082484c6d906` |
+| LUMI V4 package | `0xbacbba6c003852e0b1b4bbe3219e4cad43617bbceb75583035ebf0de7c1abf35` |
 | LUMI coin type | `0xabb438fbd62e6b2df5954fdf251027c9f939a694c1baa4ffc38cbc3eddabfeb7::lumi::LUMI` |
 | Router | `0x83d70c4960964f37b2890703a9f293999f6e01d75da002f75d941b38e52ab1cc` |
 | USDC revenue vault | `0xc6f8ff6178217465e96c7cc751d5e7aa7c1031f358cd39e7efb19aedd31a89ec` |
@@ -15,10 +15,18 @@
 | Cetus USDC/SUI pool | `0xb8d7d9e66a60c239e7a60110efcf8de6c705580ed924d0dde141f4a0e2c90105` |
 | LUMI/SUI pool | `0x451b42a0c1a3ce4b32cffda328ec22e726d7f4cb1c6f77800bd1defb1a1a2ff2` |
 
-## First test farm
+## Registered Cetus farms
 
-Use Cetus USDC/SUI only. It is listed as farm ID `0` once the router listing
-transaction is executed. Coin A is USDC and Coin B is SUI.
+| Farm ID | Pair | Pool | Fee | Registration transaction |
+| --- | --- | --- | --- | --- |
+| 0 | USDC/SUI | `0xb8d7d9e66a60c239e7a60110efcf8de6c705580ed924d0dde141f4a0e2c90105` | 0.25% | `Dddw79QXseTKQWsvojBTCde7hNqrLg6mGLQ4btaeLW3E` |
+| 1 | DEEP/SUI | `0xe01243f37f712ef87e556afb9b1d03d0fae13f96d324ec912daffc339dfdcbd2` | 0.25% | `64qqbzroLZMJSqccXXBb3okotCNFRu98LQMSEowCiNJE` |
+| 2 | USDSUI/SUI | `0x440e5e3b13b8220c5c338bb5a4291cab5c58064eaf3654c77f3e9aed5147689c` | 0.20% | `Bp73k6RNZAdwm6knrgd8LS2ng3dkHSJ1bxtYUwGQVfTV` |
+| 3 | USDSUI/USDC | `0xa7417fb5f59e23b0a7826d78f025653823c49265be07bbf6dd9e553ba4249a56` | 0.01% | `BGqyxUySnS3rww2W4YpxYPKf5ifxpmePpcpDZUeJtCs` |
+| 4 | WAL/SUI | `0x72f5c6eef73d77de271886219a2543e7c29a33de19a6c69c5cf1899f729c3f17` | 0.25% | `JBmeafeJbEZzL74ZAsV7vZXqAZy9Fbf4pVnUSrqbURDH` |
+
+The current Cetus adapter supports these five registered Cetus farms. Coin A
+and B are read from the live pool type; the dapp must not rely on display order.
 
 The dapp calls `cetus_adapter::open_position` with the router, Cetus global
 config, pool, farm ID, settlement route, tick range, USDC coin, SUI coin, and
@@ -37,10 +45,12 @@ connected operations wallet's controlled test only. Do not expose it to public
 users until an on-chain TWAP/oracle and a price-deviation guard replace the
 manual quote.
 
-## Required remaining setup
+## Remaining setup
 
-1. Register Cetus USDC/SUI in the router.
+1. Fund the wallet with DEEP and USDSUI before opening those Cetus test pairs.
 2. Query and pass Cetus GlobalConfig and RewarderGlobalVault objects.
-3. Open a small USDC/SUI test position using the dapp.
-4. Claim CETUS or SUI rewards through the selected route.
-5. Close the position and verify principal/revenue-vault accounting.
+3. Build the dedicated Bluefin/Vera adapter before listing or opening the three
+   Bluefin pools. Bluefin WAL/SUI is live at 0.20%, not the 0.175% originally
+   proposed.
+4. Open a small position, claim its venue rewards through the selected route,
+   and close using the applicable atomic settlement path.
