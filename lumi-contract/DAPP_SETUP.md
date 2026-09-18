@@ -45,12 +45,35 @@ connected operations wallet's controlled test only. Do not expose it to public
 users until an on-chain TWAP/oracle and a price-deviation guard replace the
 manual quote.
 
+## MMT replacement plan (not yet deployed)
+
+Bluefin is excluded from the launch route. No Bluefin pools are registered in
+the router. The next upgrade adds a dedicated MMT V3 adapter and, after a
+successful mainnet test, these three MMT pools can be added as new farm IDs:
+
+| Pair | MMT pool | Pool fee | Active reward inventory | Required vaults |
+| --- | --- | --- | --- | --- |
+| LBTC/SUI | `0x392745193a7e472a8fd354d9fc38f26f023547566a4cda4864ee29a2c21f6fc8` | 0.20% | DEEP | LBTC (new), SUI, DEEP |
+| SUI/USDC | `0x455cf8d2ac91e7cb883f515874af750ed3cd18195c970b7a2d46235ac2b0c388` | 0.175% | X_SUI | SUI, USDC, X_SUI (new) |
+| LBTC/USDC | `0x7665f3a76ea9bb923556906a4d8ba8d98aa59776b7f098300758fe75d161a42c` | 0.20% | DEEP | LBTC (new), USDC, DEEP |
+
+The MMT adapter is native-settlement only in this release. Users receive the
+native position assets and rewards; trading fees and claimed rewards use the
+same 97.5% user / 2% revenue vault / 0.5% operations split as Cetus. The DApp
+passes signed ticks as a positive magnitude plus a `negative` boolean. Claim
+each configured reward type before closing; the venue rejects a non-empty
+position so a close cannot silently discard accrued incentives.
+
+MMT shared objects required by every DApp PTB are:
+
+- Global config: `0x9889f38f107f5807d34c547828f4a1b4d814450005a4517a58a1ad476458abfc`
+- Version: `0x2375a0b1ec12010aaea3b2545acfa2ad34cfbba03ce4b59f4c39e1e25eed1b2a`
+
 ## Remaining setup
 
 1. Fund the wallet with DEEP and USDSUI before opening those Cetus test pairs.
 2. Query and pass Cetus GlobalConfig and RewarderGlobalVault objects.
-3. Build the dedicated Bluefin/Vera adapter before listing or opening the three
-   Bluefin pools. Bluefin WAL/SUI is live at 0.20%, not the 0.175% originally
-   proposed.
-4. Open a small position, claim its venue rewards through the selected route,
-   and close using the applicable atomic settlement path.
+3. Upgrade to the MMT adapter, then create the LBTC and X_SUI revenue vaults.
+4. Register only the MMT SUI/USDC pool first and test it at a small size.
+5. Open a small position, claim its venue rewards through the selected route,
+   and close using the applicable settlement path.

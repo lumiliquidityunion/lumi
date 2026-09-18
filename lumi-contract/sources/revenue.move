@@ -30,6 +30,12 @@ module lumi::revenue {
         balance::join(&mut vault.balance, incoming);
     }
 
+    /// Convenience entry point for venue adapters which receive native Coin
+    /// objects from a pool rather than a Balance.
+    public fun deposit_coin<CoinType>(vault: &mut RevenueVault<CoinType>, incoming: Coin<CoinType>) {
+        deposit(vault, coin::into_balance(incoming));
+    }
+
     /// Guarded-launch escape hatch. A later liquidity-deployment adapter will
     /// replace this with a constrained, price-checked deployment path.
     public fun withdraw<CoinType>(

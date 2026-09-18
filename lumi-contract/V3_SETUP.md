@@ -1,4 +1,4 @@
-# LUMI V4 deployment map
+# LUMI V4 deployment map and V5 MMT preparation
 
 V4 package: `0xbacbba6c003852e0b1b4bbe3219e4cad43617bbceb75583035ebf0de7c1abf35`  
 V4 upgrade transaction: `2kjT952BJte7c1P6J6zvxiHJssnLhNLzJFsKimN4y9Tx`
@@ -21,12 +21,24 @@ do not deploy to LP pools until a later guarded revenue-deployment upgrade.
 
 | Asset | Vault | Coin type | Reason |
 | --- | --- | --- | --- |
-| DEEP | `0xb8b0c4b6569b1d7ef5ae3ee5cd8f22666af026e0307c0dcf8ce9bfb5da1ae117` | `0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP` | Cetus/Bluefin pair asset and incentive |
+| DEEP | `0xb8b0c4b6569b1d7ef5ae3ee5cd8f22666af026e0307c0dcf8ce9bfb5da1ae117` | `0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP` | Cetus/MMT incentive |
 | USDSUI | `0xaf7470983e1056df16aeb241921a2edb59be34a6ab2d7ffb233ececb46144867` | `0x44f838219cf67b058f3b37907b655f226153c18e33dfcd0da559a844fea9b1c1::usdsui::USDSUI` | Cetus pair asset and trading fees |
-| WAL | `0xf8053d438cfdab921f9ef3d40264b1453446d8a4cb7582a9ea7244e9686f9f0a` | `0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL` | Cetus/Bluefin pair asset and incentive |
-| BLUE | `0x4ddfce7f0a2d3424ec8f9e8ad25a9945acc8382cd18bdeec74842b3d24b066c1` | `0xe1b45a0e641b9955a20aa0ad1c1f4ad86aad8afb07296d4085e349a50e90bdca::blue::BLUE` | Bluefin incentives |
-| stSUI | `0xb2ad4a25062eebfc0e97919fb32ed99d69bd12aa64545a85bfcb0ebfa5e669e1` | `0xd1b72982e40348d069bb1ff701e634c117bb5f741f44dff91e472d3b01461e55::stsui::STSUI` | Bluefin incentives |
+| WAL | `0xf8053d438cfdab921f9ef3d40264b1453446d8a4cb7582a9ea7244e9686f9f0a` | `0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL` | Cetus pair asset and incentive |
+
+## V5 MMT vault changes (pending mainnet creation)
+
+Bluefin is replaced by MMT. The existing BLUE and stSUI vaults remain empty
+legacy custody objects and will not be used by the MMT routes. V5 needs these
+two new typed revenue vaults before any MMT pool is registered:
+
+| Asset | Coin type | Used by |
+| --- | --- | --- |
+| LBTC | `0x3e8e9423d80e1774a7ca128fccd8bf5f1f7753be658c5e645929037f7c819040::lbtc::LBTC` | LBTC/SUI and LBTC/USDC trading fees |
+| X_SUI | `0x2b6602099970374cf58a2a1b9d96f005fccceb81e92eb059873baf420eb6c717::x_sui::X_SUI` | SUI/USDC MMT incentive |
+
+These are intentionally empty until the MMT adapter has been upgraded and the
+first SUI/USDC test position completes.
 
 The opening farm reward inventory was read directly from the current Cetus and
-Bluefin pool objects. New reward emissions require a new typed vault before a
+MMT pool objects. New reward emissions require a new typed vault before a
 farm can route that reward to protocol revenue.

@@ -5,7 +5,8 @@ edition = "2024.beta"
 [dependencies]
 MoveStdlib = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/move-stdlib", rev = "framework/mainnet", override = true }
 Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/mainnet", override = true }
-CetusClmm = { r.mvr = "@cetuspackages/clmm" }
+CetusClmm = { git = "https://github.com/CetusProtocol/cetus-contracts.git", subdir = "packages/cetus_clmm", rev = "e2af5950cd1819cb58772b0739ba7ece3c1619f9" }
+mmt_v3 = { git = "https://github.com/mmt-finance/mmt-contract-interface.git", subdir = "mmt_v3", rev = "mainnet" }
 
 [addresses]
 lumi = "0x0"
