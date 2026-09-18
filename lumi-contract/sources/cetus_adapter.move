@@ -61,6 +61,22 @@ module lumi::cetus_adapter {
         fee_b: u64,
     }
 
+    /// Emitted when a receipt is rebalanced into a successor receipt. Cetus
+    /// position NFTs cannot change ticks in place and Sui object UIDs cannot
+    /// be reused after the old wrapper is deleted, so indexers must follow
+    /// this event to the successor receipt.
+    public struct PositionRebalanced has copy, drop {
+        farm_id: u64,
+        old_receipt_id: sui::object::ID,
+        new_receipt_id: sui::object::ID,
+        old_cetus_position_id: sui::object::ID,
+        new_cetus_position_id: sui::object::ID,
+        tick_lower: u32,
+        tick_upper: u32,
+        amount_a: u64,
+        amount_b: u64,
+    }
+
     public struct NativeRewardClaimed has copy, drop {
         farm_id: u64,
         reward_amount: u64,
@@ -412,6 +428,100 @@ module lumi::cetus_adapter {
         });
     }
 
+    /// Close a Cetus position whose venue has three configured rewards:
+    /// CoinTypeA, CoinTypeB, and one additional reward coin.  This covers
+    /// pools such as DEEP/SUI, where leaving the CoinTypeA reward unclaimed
+    /// makes Cetus reject `close_position`.
+    ///
+    /// The type arguments must describe three distinct configured reward
+    /// slots.  The caller supplies the typed revenue vault for the third coin;
+    /// CoinTypeA and CoinTypeB rewards share the position's normal typed
+    /// vaults.  All reward and trading-fee splits follow the native 2.5%
+    /// route: 0.5% operations and 2.0% protocol revenue.
+    public entry fun close_with_three_native_rewards<
+        CoinTypeA, CoinTypeB, RewardCoin2,
+    >(
+        router: &Router,
+        config: &GlobalConfig,
+        pool: &mut Pool<CoinTypeA, CoinTypeB>,
+        position: CetusPosition<CoinTypeA, CoinTypeB>,
+        min_amount_a: u64,
+        min_amount_b: u64,
+        vault_a: &mut RevenueVault<CoinTypeA>,
+        vault_b: &mut RevenueVault<CoinTypeB>,
+        cetus_reward_vault: &mut RewarderGlobalVault,
+        reward_vault_2: &mut RevenueVault<RewardCoin2>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let CetusPosition { id, farm_id, settlement_route: _, mut cetus_position } = position;
+        router::assert_active_farm_pool(router, farm_id, object::id(pool));
+
+        let mut reward_a = pool::collect_reward<CoinTypeA, CoinTypeB, CoinTypeA>(
+            config, pool, &cetus_position, cetus_reward_vault, true, clock,
+        );
+        let reward_a_amount = balance::value(&reward_a);
+        let (reward_a_ops_fee, reward_a_protocol_fee) = router::native_reward_fees(reward_a_amount);
+        let reward_a_ops = balance::split(&mut reward_a, reward_a_ops_fee);
+        let reward_a_protocol = balance::split(&mut reward_a, reward_a_protocol_fee);
+        revenue::deposit(vault_a, reward_a_protocol);
+
+        let mut reward_b = pool::collect_reward<CoinTypeA, CoinTypeB, CoinTypeB>(
+            config, pool, &cetus_position, cetus_reward_vault, true, clock,
+        );
+        let reward_b_amount = balance::value(&reward_b);
+        let (reward_b_ops_fee, reward_b_protocol_fee) = router::native_reward_fees(reward_b_amount);
+        let reward_b_ops = balance::split(&mut reward_b, reward_b_ops_fee);
+        let reward_b_protocol = balance::split(&mut reward_b, reward_b_protocol_fee);
+        revenue::deposit(vault_b, reward_b_protocol);
+
+        let mut reward_2 = pool::collect_reward<CoinTypeA, CoinTypeB, RewardCoin2>(
+            config, pool, &cetus_position, cetus_reward_vault, true, clock,
+        );
+        let reward_2_amount = balance::value(&reward_2);
+        let (reward_2_ops_fee, reward_2_protocol_fee) = router::native_reward_fees(reward_2_amount);
+        let reward_2_ops = balance::split(&mut reward_2, reward_2_ops_fee);
+        let reward_2_protocol = balance::split(&mut reward_2, reward_2_protocol_fee);
+        revenue::deposit(reward_vault_2, reward_2_protocol);
+
+        let liquidity = position::liquidity(&cetus_position);
+        let (principal_a, principal_b) = if (liquidity > 0) {
+            pool::remove_liquidity_with_slippage(
+                config, pool, &mut cetus_position, liquidity, min_amount_a, min_amount_b, clock,
+            )
+        } else (balance::zero<CoinTypeA>(), balance::zero<CoinTypeB>());
+        let principal_a_value = balance::value(&principal_a);
+        let principal_b_value = balance::value(&principal_b);
+        let (mut fees_a, mut fees_b) = pool::collect_fee(config, pool, &cetus_position, false);
+        let fee_a = balance::value(&fees_a);
+        let fee_b = balance::value(&fees_b);
+        let (ops_a, protocol_a) = split_native_fees(&mut fees_a);
+        let (ops_b, protocol_b) = split_native_fees(&mut fees_b);
+        revenue::deposit(vault_a, protocol_a);
+        revenue::deposit(vault_b, protocol_b);
+        pool::close_position(config, pool, cetus_position);
+        object::delete(id);
+
+        let sender = tx_context::sender(ctx);
+        let ops = router::operations_wallet(router);
+        transfer::public_transfer(coin::from_balance(principal_a, ctx), sender);
+        transfer::public_transfer(coin::from_balance(principal_b, ctx), sender);
+        transfer::public_transfer(coin::from_balance(fees_a, ctx), sender);
+        transfer::public_transfer(coin::from_balance(fees_b, ctx), sender);
+        transfer::public_transfer(coin::from_balance(reward_a, ctx), sender);
+        transfer::public_transfer(coin::from_balance(reward_b, ctx), sender);
+        transfer::public_transfer(coin::from_balance(reward_2, ctx), sender);
+        if (balance::value(&ops_a) > 0) transfer::public_transfer(coin::from_balance(ops_a, ctx), ops) else balance::destroy_zero(ops_a);
+        if (balance::value(&ops_b) > 0) transfer::public_transfer(coin::from_balance(ops_b, ctx), ops) else balance::destroy_zero(ops_b);
+        if (reward_a_ops_fee > 0) transfer::public_transfer(coin::from_balance(reward_a_ops, ctx), ops) else balance::destroy_zero(reward_a_ops);
+        if (reward_b_ops_fee > 0) transfer::public_transfer(coin::from_balance(reward_b_ops, ctx), ops) else balance::destroy_zero(reward_b_ops);
+        if (reward_2_ops_fee > 0) transfer::public_transfer(coin::from_balance(reward_2_ops, ctx), ops) else balance::destroy_zero(reward_2_ops);
+        event::emit(PositionClosed { farm_id, principal_a: principal_a_value, principal_b: principal_b_value, fee_a, fee_b });
+        event::emit(NativeRewardClaimed { farm_id, reward_amount: reward_a_amount, operations_fee: reward_a_ops_fee, protocol_fee: reward_a_protocol_fee });
+        event::emit(NativeRewardClaimed { farm_id, reward_amount: reward_b_amount, operations_fee: reward_b_ops_fee, protocol_fee: reward_b_protocol_fee });
+        event::emit(NativeRewardClaimed { farm_id, reward_amount: reward_2_amount, operations_fee: reward_2_ops_fee, protocol_fee: reward_2_protocol_fee });
+    }
+
     /// Claim a Cetus incentive reward in its native coin. This is also the
     /// route-1 fallback when a LUMI quote is unavailable or below one cent.
     public entry fun claim_native_reward<CoinTypeA, CoinTypeB, RewardCoin>(
@@ -563,6 +673,92 @@ module lumi::cetus_adapter {
         let sender = tx_context::sender(ctx);
         if (coin::value(&coin_a) > 0) transfer::public_transfer(coin_a, sender) else coin::destroy_zero(coin_a);
         if (coin::value(&coin_b) > 0) transfer::public_transfer(coin_b, sender) else coin::destroy_zero(coin_b);
+    }
+
+    /// Replaces the embedded Cetus range and emits a successor LUMI receipt.
+    ///
+    /// This is the transaction submitted by the unattended keeper after it
+    /// has claimed every active venue reward in the same PTB.  It removes all
+    /// liquidity with user-supplied minimum-output protection, settles the
+    /// accrued trading-fee split, closes the old Cetus NFT, and opens the new
+    /// ticks using recovered principal plus any optional top-up coins.  The
+    /// farm id and settlement route are retained in the successor receipt.
+    /// The dapp/keeper follows the emitted event to the successor object.
+    public entry fun rebalance<CoinTypeA, CoinTypeB>(
+        router: &Router,
+        config: &GlobalConfig,
+        pool: &mut Pool<CoinTypeA, CoinTypeB>,
+        position: CetusPosition<CoinTypeA, CoinTypeB>,
+        new_tick_lower: u32,
+        new_tick_upper: u32,
+        mut extra_a: Coin<CoinTypeA>,
+        mut extra_b: Coin<CoinTypeB>,
+        min_amount_a: u64,
+        min_amount_b: u64,
+        vault_a: &mut RevenueVault<CoinTypeA>,
+        vault_b: &mut RevenueVault<CoinTypeB>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        assert!(new_tick_lower < new_tick_upper, E_MAX_INPUT);
+        let CetusPosition { mut id, farm_id, settlement_route, mut cetus_position } = position;
+        router::assert_active_farm_pool(router, farm_id, object::id(pool));
+
+        // A successor receipt cannot safely inherit dynamic-field credit
+        // state. Refuse to rebalance while a LUMI credit is outstanding, and
+        // remove an empty credit record before deleting the old wrapper.
+        if (dynamic_field::exists_<LumiCreditKey>(&id, LumiCreditKey {})) {
+            let LumiCredit { user_units, operations_units } = dynamic_field::remove<LumiCreditKey, LumiCredit>(&mut id, LumiCreditKey {});
+            assert!(user_units == 0 && operations_units == 0, E_MAX_INPUT);
+        };
+
+        let old_receipt_id = object::uid_to_inner(&id);
+        let old_cetus_position_id = object::id(&cetus_position);
+        let liquidity = position::liquidity(&cetus_position);
+        let (principal_a, principal_b) = if (liquidity > 0) {
+            pool::remove_liquidity_with_slippage(
+                config, pool, &mut cetus_position, liquidity, min_amount_a, min_amount_b, clock,
+            )
+        } else (balance::zero<CoinTypeA>(), balance::zero<CoinTypeB>());
+        let (mut fees_a, mut fees_b) = pool::collect_fee(config, pool, &cetus_position, false);
+        let (ops_a, protocol_a) = split_native_fees(&mut fees_a);
+        let (ops_b, protocol_b) = split_native_fees(&mut fees_b);
+        revenue::deposit(vault_a, protocol_a);
+        revenue::deposit(vault_b, protocol_b);
+        pool::close_position(config, pool, cetus_position);
+
+        coin::join(&mut extra_a, coin::from_balance(principal_a, ctx));
+        coin::join(&mut extra_b, coin::from_balance(principal_b, ctx));
+        let max_a = coin::value(&extra_a);
+        let max_b = coin::value(&extra_b);
+        assert!(max_a > 0 && max_b > 0, E_ZERO_INPUT);
+        let mut new_position = pool::open_position(config, pool, new_tick_lower, new_tick_upper, ctx);
+        let receipt = pool::add_liquidity_fix_coin(config, pool, &mut new_position, max_a, true, clock);
+        let (amount_a, amount_b) = pool::add_liquidity_pay_amount(&receipt);
+        assert!(amount_a <= max_a && amount_b <= max_b, E_MAX_INPUT);
+        let pay_a = coin::into_balance(coin::split(&mut extra_a, amount_a, ctx));
+        let pay_b = coin::into_balance(coin::split(&mut extra_b, amount_b, ctx));
+        pool::repay_add_liquidity(config, pool, pay_a, pay_b, receipt);
+
+        let new_cetus_position_id = object::id(&new_position);
+        let sender = tx_context::sender(ctx);
+        let ops = router::operations_wallet(router);
+        if (coin::value(&extra_a) > 0) transfer::public_transfer(extra_a, sender) else coin::destroy_zero(extra_a);
+        if (coin::value(&extra_b) > 0) transfer::public_transfer(extra_b, sender) else coin::destroy_zero(extra_b);
+        transfer::public_transfer(coin::from_balance(fees_a, ctx), sender);
+        transfer::public_transfer(coin::from_balance(fees_b, ctx), sender);
+        if (balance::value(&ops_a) > 0) transfer::public_transfer(coin::from_balance(ops_a, ctx), ops) else balance::destroy_zero(ops_a);
+        if (balance::value(&ops_b) > 0) transfer::public_transfer(coin::from_balance(ops_b, ctx), ops) else balance::destroy_zero(ops_b);
+        object::delete(id);
+        let successor = CetusPosition<CoinTypeA, CoinTypeB> {
+            id: object::new(ctx), farm_id, settlement_route, cetus_position: new_position,
+        };
+        let new_receipt_id = object::id(&successor);
+        event::emit(PositionRebalanced {
+            farm_id, old_receipt_id, new_receipt_id, old_cetus_position_id, new_cetus_position_id,
+            tick_lower: new_tick_lower, tick_upper: new_tick_upper, amount_a, amount_b,
+        });
+        transfer::public_transfer(successor, sender);
     }
 
     /// Test-only high-precision LUMI settlement. `quoted_lumi_units` is a
