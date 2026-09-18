@@ -75,15 +75,24 @@ module lumi::price_oracle {
         let earliest = if (now > window_seconds) now - window_seconds else 0;
         let count = vector::length(&oracle.observations);
         assert!(count >= 2, E_NOT_READY);
-        let first = vector::borrow(&oracle.observations, 0);
-        assert!(first.timestamp <= earliest, E_NOT_READY);
+        // Select the last observation at or before the start of this specific
+        // window. Older gaps are irrelevant and must not poison a later,
+        // otherwise continuous five-minute window.
+        let mut previous = *vector::borrow(&oracle.observations, 0);
+        let mut i = 1;
+        while (i < count) {
+            let candidate = *vector::borrow(&oracle.observations, i);
+            if (candidate.timestamp > earliest) break;
+            previous = candidate;
+            i = i + 1;
+        };
+        assert!(previous.timestamp <= earliest, E_NOT_READY);
+        assert!(earliest <= previous.timestamp + MAX_SAMPLE_GAP_SECONDS, E_STALE_WINDOW);
         let last = vector::borrow(&oracle.observations, count - 1);
         assert!(last.timestamp + MAX_SAMPLE_GAP_SECONDS >= now, E_STALE_WINDOW);
 
         let mut weighted: u256 = 0;
         let mut covered: u64 = 0;
-        let mut previous = *first;
-        let mut i = 1;
         while (i < count) {
             let current = *vector::borrow(&oracle.observations, i);
             let interval_start = if (previous.timestamp > earliest) previous.timestamp else earliest;
