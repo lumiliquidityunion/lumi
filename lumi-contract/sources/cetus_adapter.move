@@ -155,11 +155,12 @@ module lumi::cetus_adapter {
         });
     }
 
-    /// Atomically claims two native Cetus incentives and closes the position.
+    /// Atomically claims a configured native Cetus incentive plus a reward in
+    /// the pool's coin-B type, then closes the position.
     /// Cetus rejects a close while *any* reward remains outstanding, so this is
     /// the safe production settlement route for listed pools with two rewards.
     public entry fun close_with_native_rewards<
-        CoinTypeA, CoinTypeB, RewardCoin0, RewardCoin1,
+        CoinTypeA, CoinTypeB, RewardCoin0,
     >(
         router: &Router,
         config: &GlobalConfig,
@@ -171,7 +172,6 @@ module lumi::cetus_adapter {
         vault_b: &mut RevenueVault<CoinTypeB>,
         cetus_reward_vault: &mut RewarderGlobalVault,
         reward_vault_0: &mut RevenueVault<RewardCoin0>,
-        reward_vault_1: &mut RevenueVault<RewardCoin1>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -187,14 +187,14 @@ module lumi::cetus_adapter {
         let reward_0_protocol = balance::split(&mut reward_0, reward_0_protocol_fee);
         revenue::deposit(reward_vault_0, reward_0_protocol);
 
-        let mut reward_1 = pool::collect_reward<CoinTypeA, CoinTypeB, RewardCoin1>(
+        let mut reward_1 = pool::collect_reward<CoinTypeA, CoinTypeB, CoinTypeB>(
             config, pool, &cetus_position, cetus_reward_vault, true, clock,
         );
         let reward_1_amount = balance::value(&reward_1);
         let (reward_1_ops_fee, reward_1_protocol_fee) = router::native_reward_fees(reward_1_amount);
         let reward_1_ops = balance::split(&mut reward_1, reward_1_ops_fee);
         let reward_1_protocol = balance::split(&mut reward_1, reward_1_protocol_fee);
-        revenue::deposit(reward_vault_1, reward_1_protocol);
+        revenue::deposit(vault_b, reward_1_protocol);
 
         let liquidity = position::liquidity(&cetus_position);
         let (principal_a, principal_b) = if (liquidity > 0) {
