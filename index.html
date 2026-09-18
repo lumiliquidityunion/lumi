@@ -28,9 +28,12 @@
       table { width: 100%; border-collapse: collapse; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); } th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--line); } th { color: var(--aqua); font-size: .76rem; letter-spacing: .1em; text-transform: uppercase; } td { color: #dbe5e9; } tr:last-child td { border: 0; } .tag { color: var(--aqua); font-size: .8rem; }
       .notice { padding: 20px 22px; border-left: 3px solid var(--bright); border-radius: 0 12px 12px 0; color: var(--muted); background: #111823; }
       .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem; word-break: break-all; }
+      .oracle-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--line); }
+      .oracle-cell { min-height: 108px; padding: 18px; background: var(--surface); } .oracle-cell b { display: block; color: var(--aqua); font-size: 1.15rem; } .oracle-cell span { color: var(--muted); font-size: .78rem; }
+      .oracle-meta { margin: 18px 0 0; color: var(--muted); font-size: .86rem; } .oracle-meta strong { color: var(--text); } .oracle-good { color: var(--bright) !important; } .oracle-warn { color: var(--sun) !important; }
       a { color: var(--aqua); }
       footer { padding: 32px 0 46px; color: var(--muted); font-size: .85rem; }
-      @media (max-width: 760px) { header { grid-template-columns: 1fr; padding-top: 44px; } .steps { grid-template-columns: 1fr 1fr; } .stats { grid-template-columns: 1fr; } th:nth-child(3), td:nth-child(3) { display:none; } }
+      @media (max-width: 760px) { header { grid-template-columns: 1fr; padding-top: 44px; } .steps { grid-template-columns: 1fr 1fr; } .stats, .oracle-grid { grid-template-columns: 1fr; } th:nth-child(3), td:nth-child(3) { display:none; } }
       @media (max-width: 440px) { .wrap { width: min(100% - 28px, 1120px); } .steps { grid-template-columns: 1fr; } }
     </style>
   </head>
@@ -59,6 +62,16 @@
           <article class="card"><div class="num">04</div><h3>Settle in native coins</h3><p>You keep 97.5% of realized profit. LUMI routes 2% to protocol liquidity and 0.5% to operations.</p></article>
         </div>
       </section>
+      <section id="oracle">
+        <h2>LUMI / SUI price oracle</h2>
+        <div class="oracle-grid" aria-live="polite">
+          <div class="oracle-cell"><b id="oracle-status">Loading…</b><span>Five-minute TWAP status</span></div>
+          <div class="oracle-cell"><b id="oracle-price">—</b><span>Estimated SUI per LUMI</span></div>
+          <div class="oracle-cell"><b id="oracle-age">—</b><span>Latest observation age</span></div>
+          <div class="oracle-cell"><b id="oracle-coverage">—</b><span>Continuous coverage</span></div>
+        </div>
+        <p class="oracle-meta"><strong>Rule:</strong> five-minute coverage, no observation gap above 120 seconds, and a latest observation no older than 120 seconds. This panel reads the on-chain observation object every 20 seconds; it never submits a transaction or prices a trade. <a class="mono" href="https://suiscan.xyz/mainnet/object/0x054a753ddf24a05e15a8ba80b33bd8b0d3b5f604a5e9d57f210f1681a301784e">View oracle object</a></p>
+      </section>
       <section>
         <h2>Opening registry</h2>
         <table>
@@ -69,9 +82,9 @@
             <tr><td>Cetus</td><td>USDSUI / SUI</td><td>0.20%</td><td class="tag">Core</td></tr>
             <tr><td>Cetus</td><td>USDSUI / USDC</td><td>0.01%</td><td class="tag">Core</td></tr>
             <tr><td>Cetus</td><td>WAL / SUI</td><td>0.25%</td><td class="tag">Growth</td></tr>
-            <tr><td>Bluefin</td><td>SUI / USDC</td><td>0.175%</td><td class="tag">Core</td></tr>
-            <tr><td>Bluefin</td><td>DEEP / SUI</td><td>0.175%</td><td class="tag">Growth</td></tr>
-            <tr><td>Bluefin</td><td>WAL / SUI</td><td>0.175%</td><td class="tag">Growth</td></tr>
+            <tr><td>MMT</td><td>LBTC / SUI</td><td>0.20%</td><td class="tag">Growth</td></tr>
+            <tr><td>MMT</td><td>SUI / USDC</td><td>0.17%</td><td class="tag">Core</td></tr>
+            <tr><td>MMT</td><td>LBTC / USDC</td><td>0.20%</td><td class="tag">Growth</td></tr>
           </tbody>
         </table>
       </section>
@@ -92,5 +105,50 @@
       </section>
       <footer>Liquidity Union Moderated Interface · Built for Sui · <a href="https://github.com/lumiliquidityunion/lumi">Source</a></footer>
     </main>
+    <script>
+      const ORACLE_ID = '0x054a753ddf24a05e15a8ba80b33bd8b0d3b5f604a5e9d57f210f1681a301784e';
+      const GRAPHQL = 'https://graphql.mainnet.sui.io/graphql';
+      const $ = (id) => document.getElementById(id);
+      const seconds = (value) => value < 60 ? `${value}s` : `${Math.floor(value / 60)}m ${value % 60}s`;
+
+      function setStatus(valid, text) {
+        const node = $('oracle-status');
+        node.textContent = text;
+        node.className = valid ? 'oracle-good' : 'oracle-warn';
+      }
+
+      async function refreshOracle() {
+        const query = `query { object(address: "${ORACLE_ID}") { asMoveObject { contents { json } } } }`;
+        try {
+          const response = await fetch(GRAPHQL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query }) });
+          const payload = await response.json();
+          const observations = payload?.data?.object?.asMoveObject?.contents?.json?.observations ?? [];
+          if (!observations.length) throw new Error('No observations found');
+          const list = observations.map((item) => ({ timestamp: Number(item.timestamp), sqrt: item.sqrt_price })).sort((a, b) => a.timestamp - b.timestamp);
+          const latest = list.at(-1);
+          const age = Math.max(0, Math.floor(Date.now() / 1000) - latest.timestamp);
+          const earliest = latest.timestamp - 300;
+          const startIndex = list.map((item) => item.timestamp).findLastIndex((timestamp) => timestamp <= earliest);
+          const window = startIndex >= 0 ? list.slice(startIndex) : [];
+          const gaps = window.slice(1).map((item, index) => item.timestamp - window[index].timestamp);
+          const coverage = window.length > 1 ? latest.timestamp - window[0].timestamp : 0;
+          const continuous = window.length > 1 && earliest - window[0].timestamp <= 120 && coverage >= 300 && gaps.every((gap) => gap <= 120);
+          const valid = continuous && age <= 120;
+          const sqrt = Number(latest.sqrt) / 2 ** 64;
+          const suiPerLumi = sqrt * sqrt * 1e-7; // 2-decimal LUMI, 9-decimal SUI
+          $('oracle-price').textContent = `${suiPerLumi.toFixed(9)} SUI`;
+          $('oracle-age').textContent = seconds(age);
+          $('oracle-coverage').textContent = `${seconds(coverage)} · ${list.length} samples`;
+          setStatus(valid, valid ? 'TWAP valid' : age > 120 ? 'Needs fresh record' : 'Building window');
+        } catch (error) {
+          setStatus(false, 'Read unavailable');
+          $('oracle-price').textContent = '—';
+          $('oracle-age').textContent = '—';
+          $('oracle-coverage').textContent = '—';
+        }
+      }
+      refreshOracle();
+      setInterval(refreshOracle, 20000);
+    </script>
   </body>
 </html>
