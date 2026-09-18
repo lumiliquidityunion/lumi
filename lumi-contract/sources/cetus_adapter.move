@@ -252,6 +252,84 @@ module lumi::cetus_adapter {
         });
     }
 
+    /// Full LUMI close for a listed CoinTypeA/SUI farm with both its external
+    /// reward coin and its SUI reward enabled. Every recovered asset is valued
+    /// only through its own pool-bound five-minute oracle before it is retained
+    /// in the matching vault; the user receives the total guarded value in
+    /// LUMI less the selected-route 0.5% operations fee.
+    public entry fun close_position_and_rewards_for_lumi<CoinTypeA, RewardCoin>(
+        router: &Router,
+        lumi_vault: &mut Vault,
+        lumi_oracle: &PriceOracle,
+        lumi_sui_pool: &Pool<LUMI, SUI>,
+        asset_sui_oracle: &price_oracle::CetusPairOracle<CoinTypeA, SUI>,
+        reward_sui_oracle: &price_oracle::CetusPairOracle<RewardCoin, SUI>,
+        config: &GlobalConfig,
+        pool: &mut Pool<CoinTypeA, SUI>,
+        position: CetusPosition<CoinTypeA, SUI>,
+        cetus_reward_vault: &mut RewarderGlobalVault,
+        min_amount_a: u64,
+        min_amount_sui: u64,
+        retained_a_vault: &mut RevenueVault<CoinTypeA>,
+        retained_sui_vault: &mut RevenueVault<SUI>,
+        retained_reward_vault: &mut RevenueVault<RewardCoin>,
+        min_lumi_out: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let CetusPosition { id, farm_id, settlement_route, mut cetus_position } = position;
+        router::assert_active_farm_pool(router, farm_id, object::id(pool));
+        assert!(settlement_route == router::route_lumi_claim(), E_MAX_INPUT);
+
+        assert!(price_oracle::is_twap_ready(lumi_oracle, 300, clock), E_MAX_INPUT);
+        let lumi_twap = price_oracle::twap_sqrt_price(lumi_oracle, 300, clock);
+        assert!(price_oracle::is_spot_within_twap_deviation(pool::current_sqrt_price(lumi_sui_pool), lumi_twap), E_MAX_INPUT);
+        let asset_twap = price_oracle::cetus_pair_twap_sqrt_price(asset_sui_oracle, 300, clock);
+        assert!(price_oracle::is_spot_within_twap_deviation(pool::current_sqrt_price(pool), asset_twap), E_MAX_INPUT);
+        let reward_twap = price_oracle::cetus_pair_twap_sqrt_price(reward_sui_oracle, 300, clock);
+
+        let reward = pool::collect_reward<CoinTypeA, SUI, RewardCoin>(
+            config, pool, &cetus_position, cetus_reward_vault, true, clock,
+        );
+        let reward_sui = pool::collect_reward<CoinTypeA, SUI, SUI>(
+            config, pool, &cetus_position, cetus_reward_vault, true, clock,
+        );
+        let liquidity = position::liquidity(&cetus_position);
+        let (principal_a, principal_sui) = if (liquidity > 0) {
+            pool::remove_liquidity_with_slippage(
+                config, pool, &mut cetus_position, liquidity, min_amount_a, min_amount_sui, clock,
+            )
+        } else (balance::zero<CoinTypeA>(), balance::zero<SUI>());
+        let (fees_a, fees_sui) = pool::collect_fee(config, pool, &cetus_position, false);
+        pool::close_position(config, pool, cetus_position);
+        object::delete(id);
+
+        let retained_a = balance::value(&principal_a) + balance::value(&fees_a);
+        let retained_sui = balance::value(&principal_sui) + balance::value(&fees_sui) + balance::value(&reward_sui);
+        let retained_reward = balance::value(&reward);
+        let a_value_in_sui = price_oracle::quote_a_to_b(retained_a, asset_twap);
+        let reward_value_in_sui = price_oracle::quote_a_to_b(retained_reward, reward_twap);
+        let gross_lumi = price_oracle::quote_b_to_a(retained_sui + a_value_in_sui + reward_value_in_sui, lumi_twap);
+        assert!(gross_lumi > 0, E_ZERO_INPUT);
+        let operations_lumi = router::lumi_claim_fee(gross_lumi);
+        let mut user_payout = lumi::withdraw_lumi_for_settlement(lumi_vault, gross_lumi, ctx);
+        let operations = coin::split(&mut user_payout, operations_lumi, ctx);
+        let user_lumi = coin::value(&user_payout);
+        assert!(user_lumi >= min_lumi_out, E_MAX_INPUT);
+
+        revenue::deposit(retained_a_vault, principal_a);
+        revenue::deposit(retained_a_vault, fees_a);
+        revenue::deposit(retained_sui_vault, principal_sui);
+        revenue::deposit(retained_sui_vault, fees_sui);
+        revenue::deposit(retained_sui_vault, reward_sui);
+        revenue::deposit(retained_reward_vault, reward);
+        transfer::public_transfer(user_payout, tx_context::sender(ctx));
+        if (operations_lumi > 0) transfer::public_transfer(operations, router::operations_wallet(router)) else coin::destroy_zero(operations);
+        event::emit(PositionSettledInLumi {
+            farm_id, retained_a, retained_sui, gross_lumi, user_lumi, operations_lumi,
+        });
+    }
+
     /// Atomically claims a configured native Cetus incentive plus a reward in
     /// the pool's coin-B type, then closes the position.
     /// Cetus rejects a close while *any* reward remains outstanding, so this is
