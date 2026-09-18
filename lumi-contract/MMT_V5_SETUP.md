@@ -1,7 +1,12 @@
 # LUMI V5 MMT adapter integration
 
-This source-only preparation adds `lumi::mmt_adapter`. It has not been deployed
-to Sui mainnet yet, and none of the MMT pools are registered in the LUMI router.
+V5 is deployed to Sui mainnet. It adds `lumi::mmt_adapter`, the two additional
+revenue vaults, and all three MMT pools are registered in the LUMI router.
+
+- V5 package: `0x3a6e9dde0fcf456ef27c16d06d3b4ddadabc7cc8832fefbac3b7883d5601ebbd`
+- Upgrade transaction: `9xWv5RW5aSbu4Q7PuXUq7ZsFv7YANye5hGdDfsBjYX24`
+- LBTC vault: `0x3c82b695f06a69d871f0d859af643c0ccfd17d0c6fa1b7c9a150abe49896be5c`
+- X_SUI vault: `0x709119f295b6d966a4255bcaa9e956ed8dd11c982ee044a6cc49d234dd29491b`
 
 ## Objects passed to MMT calls
 
@@ -13,13 +18,11 @@ to Sui mainnet yet, and none of the MMT pools are registered in the LUMI router.
 
 ## Initial test order
 
-1. Upgrade the LUMI package to V5.
-2. Create shared `RevenueVault<LBTC>` and `RevenueVault<X_SUI>` objects.
-3. List only MMT SUI/USDC, as the connected wallet already has both assets.
-4. Open a small route-0 position through `mmt_adapter::open_position_native`.
-5. Claim its active `X_SUI` reward with `claim_native_reward`, then close with
+1. Open a small route-0 position through `mmt_adapter::open_position_native`
+   on registered farm 6 (SUI/USDC).
+2. Claim its active `X_SUI` reward with `claim_native_reward`, then close with
    `close_native` using user-provided minimum output protection.
-6. Only after this succeeds, list and test the two LBTC pools.
+3. After this succeeds, test farm 5 (LBTC/SUI) and farm 7 (LBTC/USDC).
 
 The adapter accepts route `0` only. A LUMI conversion has no on-chain price
 guard yet, so it is intentionally not offered for MMT positions.

@@ -1,7 +1,10 @@
-# LUMI V4 deployment map and V5 MMT preparation
+# LUMI V5 deployment map
 
 V4 package: `0xbacbba6c003852e0b1b4bbe3219e4cad43617bbceb75583035ebf0de7c1abf35`  
 V4 upgrade transaction: `2kjT952BJte7c1P6J6zvxiHJssnLhNLzJFsKimN4y9Tx`
+
+V5 package: `0x3a6e9dde0fcf456ef27c16d06d3b4ddadabc7cc8832fefbac3b7883d5601ebbd`  
+V5 upgrade transaction: `9xWv5RW5aSbu4Q7PuXUq7ZsFv7YANye5hGdDfsBjYX24`
 
 V4 adds `cetus_adapter::close_with_native_rewards`, which atomically claims
 the configured native reward and the pool coin-B reward before closing. This
@@ -25,19 +28,19 @@ do not deploy to LP pools until a later guarded revenue-deployment upgrade.
 | USDSUI | `0xaf7470983e1056df16aeb241921a2edb59be34a6ab2d7ffb233ececb46144867` | `0x44f838219cf67b058f3b37907b655f226153c18e33dfcd0da559a844fea9b1c1::usdsui::USDSUI` | Cetus pair asset and trading fees |
 | WAL | `0xf8053d438cfdab921f9ef3d40264b1453446d8a4cb7582a9ea7244e9686f9f0a` | `0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL` | Cetus pair asset and incentive |
 
-## V5 MMT vault changes (pending mainnet creation)
+## V5 MMT vault changes
 
 Bluefin is replaced by MMT. The existing BLUE and stSUI vaults remain empty
-legacy custody objects and will not be used by the MMT routes. V5 needs these
-two new typed revenue vaults before any MMT pool is registered:
+legacy custody objects and will not be used by the MMT routes. V5 created these
+two new typed revenue vaults:
 
-| Asset | Coin type | Used by |
+| Asset | Vault | Coin type | Used by |
 | --- | --- | --- |
-| LBTC | `0x3e8e9423d80e1774a7ca128fccd8bf5f1f7753be658c5e645929037f7c819040::lbtc::LBTC` | LBTC/SUI and LBTC/USDC trading fees |
-| X_SUI | `0x2b6602099970374cf58a2a1b9d96f005fccceb81e92eb059873baf420eb6c717::x_sui::X_SUI` | SUI/USDC MMT incentive |
+| LBTC | `0x3c82b695f06a69d871f0d859af643c0ccfd17d0c6fa1b7c9a150abe49896be5c` | `0x3e8e9423d80e1774a7ca128fccd8bf5f1f7753be658c5e645929037f7c819040::lbtc::LBTC` | LBTC/SUI and LBTC/USDC trading fees |
+| X_SUI | `0x709119f295b6d966a4255bcaa9e956ed8dd11c982ee044a6cc49d234dd29491b` | `0x2b6602099970374cf58a2a1b9d96f005fccceb81e92eb059873baf420eb6c717::x_sui::X_SUI` | SUI/USDC MMT incentive |
 
-These are intentionally empty until the MMT adapter has been upgraded and the
-first SUI/USDC test position completes.
+They are shared, empty typed custody until the first MMT settlement sends
+protocol revenue into them.
 
 The opening farm reward inventory was read directly from the current Cetus and
 MMT pool objects. New reward emissions require a new typed vault before a
