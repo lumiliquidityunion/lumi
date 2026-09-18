@@ -11,14 +11,15 @@ existing LUMI/SUI pool:
 - `record_lumi_sui` permissionlessly records the pool's on-chain square-root
   price. The caller never supplies a price.
 - Samples are no more frequent than one per minute.
-- `twap_sqrt_price` requires an entire requested window to be covered without
-  a gap over two minutes, and rejects stale or insufficient histories.
+- `twap_sqrt_price` enforces a minimum five-minute window, requires that full
+  window to be covered without a gap over two minutes, and rejects stale or
+  insufficient histories.
 
 ## Activation sequence
 
 1. Upgrade to V6 and create the shared oracle object.
-2. Call `record_lumi_sui` approximately once a minute for more than 30 minutes.
-3. Verify the oracle returns a valid 30-minute TWAP.
+2. Call `record_lumi_sui` approximately once a minute for more than five minutes.
+3. Verify the oracle returns a valid five-minute TWAP by passing `300` seconds.
 4. Only then add the separate conversion adapter, which must require this TWAP
    plus a user-provided `min_lumi_out` before it swaps or pays LUMI.
 

@@ -19,6 +19,7 @@ module lumi::price_oracle {
     const E_STALE_WINDOW: u64 = 4;
     const SAMPLE_INTERVAL_SECONDS: u64 = 60;
     const MAX_SAMPLE_GAP_SECONDS: u64 = 120;
+    const MIN_TWAP_WINDOW_SECONDS: u64 = 300;
     const MAX_SAMPLES: u64 = 60;
 
     public struct Observation has copy, drop, store {
@@ -69,7 +70,7 @@ module lumi::price_oracle {
     /// Conversion will additionally use a user-specified min-out and a maximum
     /// deviation policy.
     public fun twap_sqrt_price(oracle: &PriceOracle, window_seconds: u64, clock: &Clock): u128 {
-        assert!(window_seconds > 0, E_BAD_WINDOW);
+        assert!(window_seconds >= MIN_TWAP_WINDOW_SECONDS, E_BAD_WINDOW);
         let now = clock::timestamp_ms(clock) / 1000;
         let earliest = if (now > window_seconds) now - window_seconds else 0;
         let count = vector::length(&oracle.observations);
