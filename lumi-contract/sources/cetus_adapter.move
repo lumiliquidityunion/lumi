@@ -155,6 +155,88 @@ module lumi::cetus_adapter {
         });
     }
 
+    /// Atomically claims two native Cetus incentives and closes the position.
+    /// Cetus rejects a close while *any* reward remains outstanding, so this is
+    /// the safe production settlement route for listed pools with two rewards.
+    public entry fun close_with_native_rewards<
+        CoinTypeA, CoinTypeB, RewardCoin0, RewardCoin1,
+    >(
+        router: &Router,
+        config: &GlobalConfig,
+        pool: &mut Pool<CoinTypeA, CoinTypeB>,
+        position: CetusPosition<CoinTypeA, CoinTypeB>,
+        min_amount_a: u64,
+        min_amount_b: u64,
+        vault_a: &mut RevenueVault<CoinTypeA>,
+        vault_b: &mut RevenueVault<CoinTypeB>,
+        cetus_reward_vault: &mut RewarderGlobalVault,
+        reward_vault_0: &mut RevenueVault<RewardCoin0>,
+        reward_vault_1: &mut RevenueVault<RewardCoin1>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let CetusPosition { id, farm_id, settlement_route: _, mut cetus_position } = position;
+        router::assert_active_farm_pool(router, farm_id, object::id(pool));
+
+        let mut reward_0 = pool::collect_reward<CoinTypeA, CoinTypeB, RewardCoin0>(
+            config, pool, &cetus_position, cetus_reward_vault, true, clock,
+        );
+        let reward_0_amount = balance::value(&reward_0);
+        let (reward_0_ops_fee, reward_0_protocol_fee) = router::native_reward_fees(reward_0_amount);
+        let reward_0_ops = balance::split(&mut reward_0, reward_0_ops_fee);
+        let reward_0_protocol = balance::split(&mut reward_0, reward_0_protocol_fee);
+        revenue::deposit(reward_vault_0, reward_0_protocol);
+
+        let mut reward_1 = pool::collect_reward<CoinTypeA, CoinTypeB, RewardCoin1>(
+            config, pool, &cetus_position, cetus_reward_vault, true, clock,
+        );
+        let reward_1_amount = balance::value(&reward_1);
+        let (reward_1_ops_fee, reward_1_protocol_fee) = router::native_reward_fees(reward_1_amount);
+        let reward_1_ops = balance::split(&mut reward_1, reward_1_ops_fee);
+        let reward_1_protocol = balance::split(&mut reward_1, reward_1_protocol_fee);
+        revenue::deposit(reward_vault_1, reward_1_protocol);
+
+        let liquidity = position::liquidity(&cetus_position);
+        let (principal_a, principal_b) = if (liquidity > 0) {
+            pool::remove_liquidity_with_slippage(
+                config, pool, &mut cetus_position, liquidity, min_amount_a, min_amount_b, clock,
+            )
+        } else (balance::zero<CoinTypeA>(), balance::zero<CoinTypeB>());
+        let principal_a_value = balance::value(&principal_a);
+        let principal_b_value = balance::value(&principal_b);
+        let (mut fees_a, mut fees_b) = pool::collect_fee(config, pool, &cetus_position, false);
+        let fee_a = balance::value(&fees_a);
+        let fee_b = balance::value(&fees_b);
+        let (ops_a, protocol_a) = split_native_fees(&mut fees_a);
+        let (ops_b, protocol_b) = split_native_fees(&mut fees_b);
+        revenue::deposit(vault_a, protocol_a);
+        revenue::deposit(vault_b, protocol_b);
+        pool::close_position(config, pool, cetus_position);
+        object::delete(id);
+
+        let sender = tx_context::sender(ctx);
+        let ops = router::operations_wallet(router);
+        transfer::public_transfer(coin::from_balance(principal_a, ctx), sender);
+        transfer::public_transfer(coin::from_balance(principal_b, ctx), sender);
+        transfer::public_transfer(coin::from_balance(fees_a, ctx), sender);
+        transfer::public_transfer(coin::from_balance(fees_b, ctx), sender);
+        transfer::public_transfer(coin::from_balance(reward_0, ctx), sender);
+        transfer::public_transfer(coin::from_balance(reward_1, ctx), sender);
+        if (balance::value(&ops_a) > 0) transfer::public_transfer(coin::from_balance(ops_a, ctx), ops) else balance::destroy_zero(ops_a);
+        if (balance::value(&ops_b) > 0) transfer::public_transfer(coin::from_balance(ops_b, ctx), ops) else balance::destroy_zero(ops_b);
+        if (reward_0_ops_fee > 0) transfer::public_transfer(coin::from_balance(reward_0_ops, ctx), ops) else balance::destroy_zero(reward_0_ops);
+        if (reward_1_ops_fee > 0) transfer::public_transfer(coin::from_balance(reward_1_ops, ctx), ops) else balance::destroy_zero(reward_1_ops);
+        event::emit(PositionClosed {
+            farm_id, principal_a: principal_a_value, principal_b: principal_b_value, fee_a, fee_b,
+        });
+        event::emit(NativeRewardClaimed {
+            farm_id, reward_amount: reward_0_amount, operations_fee: reward_0_ops_fee, protocol_fee: reward_0_protocol_fee,
+        });
+        event::emit(NativeRewardClaimed {
+            farm_id, reward_amount: reward_1_amount, operations_fee: reward_1_ops_fee, protocol_fee: reward_1_protocol_fee,
+        });
+    }
+
     /// Claim a Cetus incentive reward in its native coin. This is also the
     /// route-1 fallback when a LUMI quote is unavailable or below one cent.
     public entry fun claim_native_reward<CoinTypeA, CoinTypeB, RewardCoin>(
